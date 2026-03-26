@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import express, { Application, Request, Response, NextFunction } from 'express';
 import indexRouter from './routes/index';
 
