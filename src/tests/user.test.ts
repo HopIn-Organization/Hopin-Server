@@ -33,7 +33,7 @@ describe('User Module', () => {
     expect(res.body).toEqual(expect.objectContaining({ id: expect.any(Number), name: 'Test User' }));
   });
 
-  test('POST /users invalid data should return 400', async () => {
+  test('POST /users with invalid data should return error', async () => {
     const res = await request(app).post('/users').send({});
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ message: 'Name is required' });

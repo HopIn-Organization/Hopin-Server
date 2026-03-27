@@ -48,7 +48,7 @@ export class JobController {
   addSkillsToJob = async (req: Request, res: Response): Promise<void> => {
     try {
       const jobId = parseInt(req.params.jobId as string);
-      const { skills } = req.body; // expect { skills: ['skill1', 'skill2'] }
+      const { skills } = req.body;
       if (!Array.isArray(skills) || !skills.every((s) => typeof s === 'string')) {
         res.status(400).json({ message: 'Skills should be an array of strings' });
         return;

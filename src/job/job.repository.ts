@@ -37,17 +37,22 @@ export class JobRepository {
     });
     if (!job) return null;
 
-    const skills: Skill[] = [];
-    for (const name of skillNames) {
-      let skill = await this.skillRepository.findOne({ where: { name } });
-      if (!skill) {
-        skill = this.skillRepository.create({ name });
-        skill = await this.skillRepository.save(skill);
-      }
-      skills.push(skill);
-    }
+    // Fetch existing skills in one query
+    const existingSkills = await this.skillRepository.find({
+      where: skillNames.map(name => ({ name }))
+    });
+    const existingSkillNames = new Set(existingSkills.map(skill => skill.name));
 
-    job.skills = [...(job.skills || []), ...skills];
+    // Create missing skills
+    const skillsToCreate = skillNames.filter(name => !existingSkillNames.has(name));
+    const newSkills = await Promise.all(
+      skillsToCreate.map(name => this.skillRepository.save(this.skillRepository.create({ name })))
+    );
+
+    // Combine existing and new skills
+    const allSkills = [...existingSkills, ...newSkills];
+
+    job.skills = [...(job.skills || []), ...allSkills];
     return this.jobRepository.save(job);
   }
 }
