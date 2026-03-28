@@ -32,6 +32,7 @@
   },
   "homepage": "https://github.com/TamarTal23/Hopin-Client#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "pg": "^8.20.0",
