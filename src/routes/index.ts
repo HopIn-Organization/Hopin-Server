@@ -6,9 +6,6 @@ import projectRoutes from '../project/project.routes';
 
 const router = Router();
 
-router.use('/', userRoutes);
-router.use('/', jobRoutes);
-router.use('/', projectRoutes);
 
 router.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'Welcome to Hopin API' });
@@ -18,6 +15,9 @@ router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
 
+router.use('/users', userRoutes);
+router.use('/jobs', jobRoutes);
+router.use('/projects', projectRoutes);
 router.use('/onboarding', onboardingRoutes);
 
 export default router;
