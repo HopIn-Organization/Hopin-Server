@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { OnboardingService } from '../services/onboarding.service';
+import { OnboardingService } from './onboarding.service';
 
 const onboardingService = new OnboardingService();
 
@@ -26,9 +26,9 @@ export const generateOnboarding = async (
       return;
     }
 
-    const tasks = await onboardingService.generateBoard({ userId, jobId, documents });
+    const onBoarding = await onboardingService.generateBoard({ userId, jobId, documents });
 
-    res.status(200).json({ tasks });
+    res.status(200).json({ tasks: onBoarding });
   } catch (error) {
     next(error);
   }

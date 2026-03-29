@@ -10,6 +10,7 @@ Company Onboarding Guidelines:
 `.trim();
 
 export interface OnboardingPromptInput {
+  onboardingId: number;
   userName: string;
   userExperienceYears: number | null;
   userSkills: string[];
@@ -22,6 +23,7 @@ export interface OnboardingPromptInput {
 
 export function buildOnboardingPrompt(input: OnboardingPromptInput): string {
   const {
+    onboardingId,
     userName,
     userExperienceYears,
     userSkills,
@@ -60,6 +62,9 @@ You are an expert onboarding manager for a software company. Your job is to crea
 
 Use all the information provided below to generate a realistic, practical, and tailored onboarding plan.
 
+## Onboarding Record
+- Onboarding ID: ${onboardingId}
+
 ## New Employee Profile
 - Name: ${userName}
 - Experience: ${experienceLabel}
@@ -89,16 +94,18 @@ Rules:
 - Aim for 6 to 12 tasks total
 - estimatedDays should reflect realistic effort (1–5 days per task)
 
-Respond ONLY with a valid JSON object in this exact format, no explanation or markdown:
-{
-  "tasks": [
-    {
-      "order": 1,
-      "title": "Short task title",
-      "description": "Detailed description of what the employee should do and why it matters for their onboarding.",
-      "estimatedDays": 1
-    }
-  ]
-}
+Respond ONLY with a valid JSON array of Task entity objects in this exact format, no explanation or markdown:
+[
+  {
+    "order": 1,
+    "title": "Short task title",
+    "description": "Detailed description of what the employee should do and why it matters for their onboarding.",
+    "estimatedDays": 1,
+    "isCompleted": false,
+    "onboardingId": ${onboardingId},
+    "parent": null,
+    "subtasks": []
+  }
+]
 `.trim();
 }

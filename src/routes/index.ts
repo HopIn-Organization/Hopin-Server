@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import onboardingRoutes from './onboarding.routes';
+import onboardingRoutes from './../onBoarding/onboarding.routes';
 
 const router = Router();
 

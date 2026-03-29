@@ -1,14 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
-export interface OnboardingTask {
-  order: number;
-  title: string;
-  description: string;
-  estimatedDays: number;
-}
+import { isTaskArray } from '../utils/typeguards/isTask';
+import { Task } from '../task/task.entity';
 
 interface GeminiResponse {
-  tasks: OnboardingTask[];
+  tasks: Task[];
 }
 
 const MODEL_NAME = 'gemini-1.5-flash';
@@ -24,7 +19,7 @@ export class LLMService {
     this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
-  async generateOnboardingTasks(prompt: string): Promise<OnboardingTask[]> {
+  async generateOnboardingTasks(prompt: string): Promise<Task[]> {
     const model = this.genAI.getGenerativeModel({
       model: MODEL_NAME,
       generationConfig: {
@@ -37,8 +32,8 @@ export class LLMService {
 
     const parsed: GeminiResponse = JSON.parse(text);
 
-    if (!Array.isArray(parsed.tasks)) {
-      throw new Error('Unexpected response structure from Gemini: missing tasks array');
+    if (!isTaskArray(parsed.tasks)) {
+      throw new Error('Unexpected response structure from Gemini: wrong task array');
     }
 
     return parsed.tasks;
