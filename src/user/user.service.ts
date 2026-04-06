@@ -19,4 +19,8 @@ export class UserService {
   async createUser(userData: Partial<User>): Promise<User> {
     return this.userRepository.create(userData);
   }
+
+  async getUserProjects(userId: number) {
+    return this.userRepository.findProjects(userId);
+  }
 }

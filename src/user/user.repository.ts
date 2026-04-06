@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../database/data-source';
 import { User } from '../database/entities/user.entity';
+import { ProjectUser } from '../database/entities/project-user.entity';
 
 export class UserRepository {
   private userRepository: Repository<User>;
@@ -25,5 +26,12 @@ export class UserRepository {
   async create(userData: Partial<User>): Promise<User> {
     const user = this.userRepository.create(userData);
     return this.userRepository.save(user);
+  }
+
+  async findProjects(userId: number): Promise<ProjectUser[]> {
+    return AppDataSource.getRepository(ProjectUser).find({
+      where: { userId },
+      relations: ['project'],
+    });
   }
 }
