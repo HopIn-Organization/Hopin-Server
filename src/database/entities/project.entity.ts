@@ -16,6 +16,6 @@ export class Project {
   @OneToMany(() => Job, (job) => job.project)
   jobs!: Job[];
 
-  @OneToMany(() => ProjectUser, (pu) => pu.project)
+  @OneToMany(() => ProjectUser, (projectUser) => projectUser.project)
   projectUsers!: ProjectUser[];
 }

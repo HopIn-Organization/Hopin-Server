@@ -48,7 +48,7 @@ export class ProjectController {
 
   getProjectMembers = async (req: Request, res: Response): Promise<void> => {
     try {
-      const projectId = parseInt(req.params.id);
+      const projectId = parseInt(req.params.id as string);
       const project = await this.projectService.getProjectById(projectId);
       if (!project) {
         res.status(404).json({ message: 'Project not found' });
@@ -63,7 +63,7 @@ export class ProjectController {
 
   addUserToProject = async (req: Request, res: Response): Promise<void> => {
     try {
-      const projectId = parseInt(req.params.id);
+      const projectId = parseInt(req.params.id as string);
       const { userId, role } = req.body;
 
       if (!userId) {
@@ -97,8 +97,8 @@ export class ProjectController {
 
   assignRole = async (req: Request, res: Response): Promise<void> => {
     try {
-      const projectId = parseInt(req.params.id);
-      const userId = parseInt(req.params.userId);
+      const projectId = parseInt(req.params.id as string);
+      const userId = parseInt(req.params.userId as string);
       const { role } = req.body;
 
       if (!role || !(role in ProjectRole)) {
