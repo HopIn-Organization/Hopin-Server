@@ -1,11 +1,9 @@
 import { Router } from "express";
-import { generateOnboarding } from "./onboarding.controller";
+import { onboardingController } from "./onboarding.controller";
 
 const router = Router();
 
 router.get("/:userId");
-// POST /onboarding/generate
-// Body: { userId: number, jobId: number, documents?: string[] }
-router.post("/generate", generateOnboarding);
+router.post("/generate", onboardingController.generateOnboarding);
 
 export default router;

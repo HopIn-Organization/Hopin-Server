@@ -6,7 +6,6 @@ import projectRoutes from '../project/project.routes';
 
 const router = Router();
 
-
 router.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'Welcome to Hopin API' });
 });
