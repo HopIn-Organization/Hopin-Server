@@ -33,6 +33,7 @@
   },
   "homepage": "https://github.com/TamarTal23/Hopin-Client#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.3.1",
