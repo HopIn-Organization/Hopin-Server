@@ -49,14 +49,11 @@ export class JobController {
     try {
       const jobId = parseInt(req.params.jobId as string);
       const { skills } = req.body;
-
       if (!Array.isArray(skills) || !skills.every((s) => typeof s === 'string')) {
         res.status(400).json({ message: 'Skills should be an array of strings' });
         return;
       }
-
       const job = await this.jobService.addSkillsToJob(jobId, skills);
-      
       if (job) {
         res.json(job);
       } else {

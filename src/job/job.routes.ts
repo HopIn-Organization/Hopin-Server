@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { JobController } from './job.controller';
-import { authenticateAccessToken } from '../auth/auth.middleware';
 
 const router = Router();
 const jobController = new JobController();
