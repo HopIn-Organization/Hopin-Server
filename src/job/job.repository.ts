@@ -2,19 +2,21 @@ import { Repository } from "typeorm";
 import { AppDataSource } from "../database/data-source";
 import { Job } from "../job/job.entity";
 import { Skill } from "../database/entities/skill.entity";
+import { SkillRepository } from "../skill/skill.repository";
 
 export class JobRepository {
   private jobRepository: Repository<Job>;
-  private skillRepository: Repository<Skill>;
+  private skillRepository: SkillRepository;
 
   constructor() {
     this.jobRepository = AppDataSource.getRepository(Job);
-    this.skillRepository = AppDataSource.getRepository(Skill);
+    this.skillRepository = new SkillRepository;
   }
 
   async findAll(): Promise<Job[]> {
     return this.jobRepository.find({
       relations: ["skills", "project"],
+      order: { id: "DESC" },
     });
   }
 
@@ -27,6 +29,7 @@ export class JobRepository {
 
   async create(jobData: Partial<Job>): Promise<Job> {
     const job = this.jobRepository.create(jobData);
+
     return this.jobRepository.save(job);
   }
 
@@ -38,28 +41,20 @@ export class JobRepository {
       where: { id: jobId },
       relations: ["skills"],
     });
+
     if (!job) return null;
 
-    // Fetch existing skills in one query
-    const existingSkills = await this.skillRepository.find({
-      where: skillNames.map(name => ({ name })),
-    });
-    const existingSkillNames = new Set(existingSkills.map(skill => skill.name));
-
-    // Create missing skills
-    const skillsToCreate = skillNames.filter(
-      name => !existingSkillNames.has(name)
-    );
-    const newSkills = await Promise.all(
-      skillsToCreate.map(name =>
-        this.skillRepository.save(this.skillRepository.create({ name }))
+    const skills = await Promise.all(
+      skillNames.map(name =>
+        this.skillRepository.findOrCreate({ name })
       )
     );
 
-    // Combine existing and new skills
-    const allSkills = [...existingSkills, ...newSkills];
+    const existingIds = new Set((job.skills || []).map(s => s.id));
+    const uniqueSkills = skills.filter(s => !existingIds.has(s.id));
 
-    job.skills = [...(job.skills || []), ...allSkills];
+    job.skills = [...(job.skills || []), ...uniqueSkills];
+
     return this.jobRepository.save(job);
   }
 }
