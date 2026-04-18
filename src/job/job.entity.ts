@@ -2,6 +2,7 @@ import {
   Column,
   Entity,
   JoinColumn,
+  JoinTable,
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -25,5 +26,16 @@ export class Job {
   project!: Project | null;
 
   @ManyToMany(() => Skill, skill => skill.jobs)
+  @JoinTable({
+    name: "job_skills",
+    joinColumn: {
+      name: "job_id",
+      referencedColumnName: "id",
+    },
+    inverseJoinColumn: {
+      name: "skill_id",
+      referencedColumnName: "id",
+    },
+  })
   skills!: Skill[];
 }

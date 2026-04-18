@@ -19,17 +19,6 @@ export class Skill {
   name!: string;
 
   @ManyToMany(() => Job, job => job.skills)
-  @JoinTable({
-    name: "job_skills",
-    joinColumn: {
-      name: "job_id",
-      referencedColumnName: "id",
-    },
-    inverseJoinColumn: {
-      name: "skill_id",
-      referencedColumnName: "id",
-    },
-  })
   jobs!: Job[];
 
   @ManyToMany(() => User, user => user.skills)
