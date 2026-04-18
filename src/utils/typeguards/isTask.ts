@@ -7,8 +7,6 @@ const isTaskObject = (value: unknown): value is Task => {
 
   const task = value as Record<string, unknown>;
 
-  console.log(task);
-
   return (
     typeof task.onboardingId === 'number' &&
     typeof task.order === 'number' &&
