@@ -14,7 +14,6 @@ export class OnboardingController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      console.log('Received generateOnboarding request with body:', req.body);
       const { userId, jobId, documents } = req.body;
 
       if (!userId || !jobId) {
