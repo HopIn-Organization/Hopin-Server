@@ -11,15 +11,15 @@ export class ProjectRepository {
 
   async findAll(): Promise<Project[]> {
     return this.repository.find({
-      relations: ["jobs"],
-      order: { id: "DESC" }
+      relations: ["jobs", "members", "members.user", "members.jobs"],
+      order: { id: "DESC" },
     });
   }
 
   async findById(id: number): Promise<Project | null> {
     return this.repository.findOne({
       where: { id },
-      relations: ["jobs"],
+      relations: ["jobs", "members", "members.user", "members.jobs"],
     });
   }
 

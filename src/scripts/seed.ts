@@ -2,6 +2,10 @@ import "reflect-metadata";
 import { AppDataSource } from "../database/data-source";
 import { User } from "../database/entities/user.entity";
 import { Skill } from "../database/entities/skill.entity";
+import {
+  ProjectMember,
+  ProjectRole,
+} from "../database/entities/projectMember.entity";
 import { Job } from "../job/job.entity";
 import { Project } from "../project/project.entity";
 
@@ -120,6 +124,59 @@ async function seed() {
       await AppDataSource.getRepository(User).save(user);
     }
     console.log("User skills assigned");
+
+    const membershipsData = [
+      {
+        user: users[0],
+        project: projects[0],
+        role: ProjectRole.ADMIN,
+      },
+      {
+        user: users[1],
+        project: projects[0],
+        role: ProjectRole.TRAINEE,
+      },
+      {
+        user: users[2],
+        project: projects[1],
+        role: ProjectRole.ADMIN,
+      },
+      {
+        user: users[3],
+        project: projects[2],
+        role: ProjectRole.TRAINEE,
+      },
+      {
+        user: users[4],
+        project: projects[2],
+        role: ProjectRole.ADMIN,
+      },
+    ];
+    const memberships: ProjectMember[] = [];
+    for (const data of membershipsData) {
+      const membership = AppDataSource.getRepository(ProjectMember).create(data);
+      const saved = await AppDataSource.getRepository(ProjectMember).save(
+        membership
+      );
+      memberships.push(saved);
+    }
+    console.log("Project memberships created");
+
+    // Assign project members to jobs
+    const jobMemberAssignments = [
+      [0, 1], // Frontend Developer: Alice and Bob on project 1
+      [0, 1], // Backend Developer: Alice and Bob on project 1
+      [2], // Full Stack Developer: Charlie on project 2
+      [3, 4], // Data Engineer: Diana and Eve on project 3
+      [4], // DevOps Engineer: Eve on project 3
+    ];
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
+      const memberIndices = jobMemberAssignments[i];
+      job.assignedMembers = memberIndices.map((idx) => memberships[idx]);
+      await AppDataSource.getRepository(Job).save(job);
+    }
+    console.log("Job members assigned");
 
     console.log("Seeding completed successfully");
   } catch (error) {
