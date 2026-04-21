@@ -3,6 +3,8 @@ import { ProjectRepository } from "./project.repository";
 import { JobRepository } from "../job/job.repository";
 import { SkillRepository } from "../skill/skill.repository"; // Adjust path as needed
 import { Skill } from "../database/entities/skill.entity";
+import { AppDataSource } from "../database/data-source";
+import { ProjectMember, ProjectRole } from "../database/entities/projectMember.entity";
 
 interface CreateProjectPayload {
   name: string;
@@ -67,5 +69,22 @@ export class ProjectService {
     };
 
     return completeProject;
+  }
+
+  async updateMemberRole(projectId: number, memberId: number, role: ProjectRole): Promise<ProjectMember> {
+    const projectMemberRepository = AppDataSource.getRepository(ProjectMember);
+
+    const member = await projectMemberRepository.findOne({
+      where: { id: memberId, project: { id: projectId } },
+      relations: ["project"],
+    });
+
+    if (!member) {
+      throw new Error("Project member not found");
+    }
+
+    member.role = role;
+
+    return projectMemberRepository.save(member);
   }
 }
