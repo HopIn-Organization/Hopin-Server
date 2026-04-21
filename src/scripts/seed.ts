@@ -1,10 +1,10 @@
 import "reflect-metadata";
 import { AppDataSource } from "../database/data-source";
 import { User } from "../database/entities/user.entity";
-import { Skill } from "../database/entities/skill.entity";
 import { Job } from "../job/job.entity";
 import { Project } from "../project/project.entity";
 import { ProjectMember, ProjectRole } from "../projectMember/projectMember.entity";
+import { Skill } from "../skill/skill.entity";
 
 async function seed() {
   try {

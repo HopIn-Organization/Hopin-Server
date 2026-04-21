@@ -1,7 +1,6 @@
 import { Repository } from "typeorm";
 import { AppDataSource } from "../database/data-source";
 import { Job } from "../job/job.entity";
-import { Skill } from "../database/entities/skill.entity";
 import { SkillRepository } from "../skill/skill.repository";
 
 export class JobRepository {

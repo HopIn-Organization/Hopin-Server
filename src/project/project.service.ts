@@ -2,7 +2,7 @@ import { Project } from "./project.entity";
 import { ProjectRepository } from "./project.repository";
 import { JobRepository } from "../job/job.repository";
 import { SkillRepository } from "../skill/skill.repository"; // Adjust path as needed
-import { Skill } from "../database/entities/skill.entity";
+import { Skill } from "../skill/skill.entity";
 
 interface CreateProjectPayload {
   name: string;

@@ -6,8 +6,9 @@ import {
   ManyToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import { User } from "./user.entity";
-import { Job } from "../../job/job.entity";
+import { User } from "../database/entities/user.entity";
+import { Job } from "../job/job.entity";
+
 
 @Entity({ name: "skills" })
 export class Skill {
