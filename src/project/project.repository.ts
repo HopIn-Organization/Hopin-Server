@@ -19,7 +19,7 @@ export class ProjectRepository {
   async findById(id: number): Promise<Project | null> {
     return this.repository.findOne({
       where: { id },
-      relations: ["jobs", "members", "members.user", "members.jobs"],
+      relations: { jobs: true, members: { user: true, jobs: true } },
     });
   }
 
