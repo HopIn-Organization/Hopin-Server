@@ -1,7 +1,8 @@
-import { Column, Entity, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { User } from "./user.entity";
-import { Project } from "../../project/project.entity";
-import { Job } from "../../job/job.entity";
+import { Column, Entity, ManyToMany, ManyToOne, PrimaryGeneratedColumn, RelationId } from "typeorm";
+import { User } from "../database/entities/user.entity";
+import { Project } from "../project/project.entity";
+import { Job } from "../job/job.entity";
+
 
 export enum ProjectRole {
     TRAINEE = "trainee",
@@ -19,6 +20,9 @@ export class ProjectMember {
     @ManyToOne(() => Project, (project) => project.members)
     project!: Project;
 
+    @RelationId((member: ProjectMember) => member.project)
+    projectId!: number;
+
     @Column({
         type: "enum",
         enum: ProjectRole,
@@ -26,6 +30,9 @@ export class ProjectMember {
     })
     role!: ProjectRole;
 
-    @ManyToMany(() => Job, (job) => job.assignedMembers)
-    jobs!: Job[];
+    @ManyToOne(() => Job, (job) => job.members, {
+        nullable: false,
+        onDelete: "RESTRICT",
+    })
+    job!: Job;
 }

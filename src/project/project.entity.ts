@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Job } from "../job/job.entity";
-import { ProjectMember } from "../database/entities/projectMember.entity";
+import { ProjectMember } from "../projectMember/projectMember.entity";
 
 @Entity({ name: "projects" })
 export class Project {

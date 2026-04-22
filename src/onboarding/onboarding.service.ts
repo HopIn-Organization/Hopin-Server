@@ -48,11 +48,11 @@ export class OnboardingService {
     const [user, job] = await Promise.all([
       userRepo.findOne({
         where: { id: userId },
-        relations: ['skills'],
+        relations: { skills: true },
       }),
       jobRepo.findOne({
         where: { id: jobId },
-        relations: ['skills', 'project'],
+        relations: { skills: true, project: true },
       }),
     ]);
 

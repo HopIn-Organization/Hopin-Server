@@ -1,6 +1,6 @@
 import { Repository } from "typeorm";
 import { AppDataSource } from "../database/data-source";
-import { Skill } from "../database/entities/skill.entity";
+import { Skill } from "./skill.entity";
 
 export class SkillRepository {
     private repository: Repository<Skill>;

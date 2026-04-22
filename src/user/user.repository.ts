@@ -11,24 +11,14 @@ export class UserRepository {
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      relations: [
-        'skills',
-        'projectMemberships',
-        'projectMemberships.project',
-        'projectMemberships.jobs',
-      ]
+      relations: { skills: true, projectMemberships: { project: true, job: true } }
     });
   }
 
   async findById(id: number): Promise<User | null> {
     return this.userRepository.findOne({
       where: { id },
-      relations: [
-        'skills',
-        'projectMemberships',
-        'projectMemberships.project',
-        'projectMemberships.jobs',
-      ]
+      relations: { skills: true, projectMemberships: { project: true, job: true } }
     });
   }
 

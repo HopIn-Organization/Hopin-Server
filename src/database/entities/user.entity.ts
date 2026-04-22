@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Skill } from './skill.entity';
-import { ProjectMember } from './projectMember.entity';
+import { ProjectMember } from '../../projectMember/projectMember.entity';
+import { Skill } from '../../skill/skill.entity';
 
 @Entity({ name: 'users' })
 export class User {
@@ -10,8 +10,8 @@ export class User {
   @Column({ type: 'text', name: 'name' })
   name!: string;
 
-  @Column({ type: 'text', name: 'email', nullable: true, unique: true })
-  email!: string | null;
+  @Column({ type: 'text', name: 'email', unique: true })
+  email!: string;
 
   @Column({ type: 'text', name: 'password_hash', nullable: true, select: false })
   passwordHash!: string | null;
