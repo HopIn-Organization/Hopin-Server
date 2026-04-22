@@ -1,5 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, RelationId, UpdateDateColumn } from 'typeorm';
-import { Onboarding } from '../onBoarding/onBoarding.entity';
+import { Onboarding } from '../onboarding/onBoarding.entity';
 
 @Entity({ name: 'task' })
 export class Task {
@@ -22,12 +22,12 @@ export class Task {
   @Column({ type: 'int', name: 'estimated_days' })
   estimatedDays!: number;
 
-  @Column({ type: 'boolean', name: 'is_completed' , default: false})
+  @Column({ type: 'boolean', name: 'is_completed', default: false })
   isCompleted!: boolean;
 
   @ManyToOne(() => Task, (task) => task.subtasks, { nullable: true })
   parent?: Task;
-  
+
   @OneToMany(() => Task, (task) => task.parent)
   subtasks!: Task[];
 }
