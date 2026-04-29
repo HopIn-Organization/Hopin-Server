@@ -1,5 +1,5 @@
 {
-  "name": "hopin-client",
+  "name": "hopin-server",
   "version": "1.0.0",
   "description": "Hopin backend server built with Express and TypeScript",
   "main": "dist/server.js",

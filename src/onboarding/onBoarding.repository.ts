@@ -1,16 +1,15 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../database/data-source';
-import { Onboarding } from './onBoarding.entity';
-import { log } from 'console';
+import { OnBoarding } from './onBoarding.entity';
 
 export class OnboardingRepository {
-  private onboardingRepository: Repository<Onboarding>;
+  private onboardingRepository: Repository<OnBoarding>;
 
   constructor() {
-    this.onboardingRepository = AppDataSource.getRepository(Onboarding);
+    this.onboardingRepository = AppDataSource.getRepository(OnBoarding);
   }
 
-  async getOnboarding(id: number): Promise<Onboarding | null> {
+  async getOnboarding(id: number): Promise<OnBoarding | null> {
     return this.onboardingRepository.findOne({
       where: { id },
       relations: { user: true, job: true, project: true, tasks: true },
@@ -20,14 +19,14 @@ export class OnboardingRepository {
   async getOnboardingByUserIdAndJobId(
     userId: number,
     jobId: number
-  ): Promise<Onboarding | null> {
+  ): Promise<OnBoarding | null> {
     return this.onboardingRepository.findOne({
       where: { user: { id: userId }, job: { id: jobId } },
       relations: { user: true, job: true, project: true, tasks: true },
     });
   }
 
-  async createOnboarding(data: Partial<Onboarding>): Promise<Onboarding> {
+  async createOnboarding(data: Partial<OnBoarding>): Promise<OnBoarding> {
     const onboarding = this.onboardingRepository.create({
       job: { id: data.jobId },
       user: { id: data.userId },

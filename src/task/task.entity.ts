@@ -1,5 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, RelationId, UpdateDateColumn } from 'typeorm';
-import { Onboarding } from '../onboarding/onBoarding.entity';
+import { OnBoarding } from '../onBoarding/onBoarding.entity';
 
 @Entity({ name: 'task' })
 export class Task {
@@ -9,9 +9,9 @@ export class Task {
   @Column({ type: 'int', name: 'order' })
   order!: number;
 
-  @ManyToOne(() => Onboarding, (onboarding) => onboarding.tasks)
+  @ManyToOne(() => OnBoarding, (onboarding) => onboarding.tasks)
   @JoinColumn({ name: 'onboarding_id' })
-  onboarding?: Onboarding;
+  onboarding?: OnBoarding;
 
   @Column({ type: 'text', name: 'title' })
   title!: string;

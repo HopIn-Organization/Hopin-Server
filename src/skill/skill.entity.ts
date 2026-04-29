@@ -26,11 +26,11 @@ export class Skill {
   @JoinTable({
     name: "user_skills",
     joinColumn: {
-      name: "user_id",
+      name: "skill_id",
       referencedColumnName: "id",
     },
     inverseJoinColumn: {
-      name: "skill_id",
+      name: "user_id",
       referencedColumnName: "id",
     },
   })

@@ -3,9 +3,8 @@ import { User } from '../database/entities/user.entity';
 import { Job } from '../job/job.entity';
 import { buildOnboardingPrompt } from '../prompts/onboarding.prompt';
 import { LLMService } from '../services/llm.service';
-import { Task } from '../task/task.entity';
 import { TaskService } from '../task/task.service';
-import { Onboarding } from './onBoarding.entity';
+import { OnBoarding } from './onBoarding.entity';
 import { OnboardingRepository } from './onBoarding.repository';
 
 export interface GenerateOnboardingInput {
@@ -25,21 +24,21 @@ export class OnboardingService {
     this.onboardingRepository = new OnboardingRepository();
   }
 
-  async getOnBoardingById(id: number): Promise<Onboarding | null> {
+  async getOnBoardingById(id: number): Promise<OnBoarding | null> {
     return this.onboardingRepository.getOnboarding(id);
   }
 
   async getOnboarding(
     userId: number,
     jobId: number
-  ): Promise<Onboarding | null> {
+  ): Promise<OnBoarding | null> {
     return this.onboardingRepository.getOnboardingByUserIdAndJobId(
       userId,
       jobId
     );
   }
 
-  async generateBoard(input: GenerateOnboardingInput): Promise<Onboarding> {
+  async generateBoard(input: GenerateOnboardingInput): Promise<OnBoarding> {
     const { userId, jobId, documents = [] } = input;
 
     const userRepo = AppDataSource.getRepository(User);

@@ -47,4 +47,25 @@ export class ProjectController {
       res.status(500).json({ message: 'Error creating project' });
     }
   };
+
+  updateProject = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id as string);
+      const projectData = req.body;
+
+      if (!projectData || !projectData.name) {
+        res.status(400).json({ message: 'Name is required' });
+        return;
+      }
+
+      const project = await this.projectService.updateProject(id, projectData);
+      res.json(project);
+    } catch (error: any) {
+      if (error.message === 'Project not found') {
+        res.status(404).json({ message: 'Project not found' });
+      } else {
+        res.status(500).json({ message: 'Error updating project' });
+      }
+    }
+  };
 }

@@ -11,7 +11,7 @@ export class ProjectRepository {
 
   async findAll(): Promise<Project[]> {
     return this.repository.find({
-      relations: { jobs: true, members: { user: true, job: true } },
+      relations: { jobs: { skills: true }, members: { user: true, job: true } },
       order: { id: "DESC" },
     });
   }
@@ -19,7 +19,7 @@ export class ProjectRepository {
   async findById(id: number): Promise<Project | null> {
     return this.repository.findOne({
       where: { id },
-      relations: { jobs: true, members: { user: true, job: true } },
+      relations: { jobs: { skills: true }, members: { user: true, job: true } },
       order: {
         members: { id: "DESC" }
       }

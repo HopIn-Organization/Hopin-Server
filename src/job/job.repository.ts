@@ -28,6 +28,13 @@ export class JobRepository {
     });
   }
 
+  async findByProjectId(projectId: number): Promise<Job[]> {
+    return this.jobRepository.find({
+      where: { project: { id: projectId } },
+      relations: { skills: true },
+    });
+  }
+
   async create(jobData: Partial<Job>): Promise<Job> {
     const job = this.jobRepository.create(jobData);
 
@@ -56,6 +63,10 @@ export class JobRepository {
 
     job.skills = [...(job.skills || []), ...uniqueSkills];
 
+    return this.jobRepository.save(job);
+  }
+
+  async save(job: Job): Promise<Job> {
     return this.jobRepository.save(job);
   }
 }
