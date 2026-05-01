@@ -104,6 +104,31 @@ export class OnboardingController {
       next(error);
     }
   };
+  getOnboardingById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const onboardingId = parseInt(req.params.id as string);
+
+      if (isNaN(onboardingId)) {
+        res.status(400).json({ error: 'onboardingId must be a valid number' });
+        return;
+      }
+
+      const onboarding = await this.onboardingService.getOnBoardingById(onboardingId);
+
+      if (!onboarding) {
+        res.status(404).json({ error: 'Onboarding not found' });
+        return;
+      }
+
+      res.status(200).json( onboarding );
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const onboardingController = new OnboardingController();

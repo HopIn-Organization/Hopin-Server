@@ -11,4 +11,8 @@ export class TaskService {
   async createTasks(tasksData: Partial<Task>[]): Promise<Task[]> {
     return this.taskRepository.createTasks(tasksData);
   }
+
+  async completeTask(taskId: number): Promise<Task | null> {
+    return this.taskRepository.completeTask(taskId);
+  }
 }

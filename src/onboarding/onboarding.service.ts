@@ -33,7 +33,7 @@ export class OnboardingService {
     const completedDays = tasks
       .filter((t) => t.isCompleted)
       .reduce((sum, t) => sum + t.estimatedDays, 0);
-    return totalDays > 0 ? (completedDays / totalDays) * 100 : 0;
+    return +(totalDays > 0 ? (completedDays / totalDays) * 100 : 0).toFixed(2);
   }
 
   private withProgress(onboarding: OnBoarding): OnboardingWithProgress {

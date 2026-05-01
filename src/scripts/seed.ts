@@ -3,9 +3,11 @@ import { DataSource } from "typeorm";
 import { AppDataSource } from "../database/data-source";
 import { User } from "../database/entities/user.entity";
 import { Job } from "../job/job.entity";
+import { OnBoarding } from "../onboarding/onBoarding.entity";
 import { Project } from "../project/project.entity";
 import { ProjectMember, ProjectRole } from "../projectMember/projectMember.entity";
 import { Skill } from "../skill/skill.entity";
+import { Task } from "../task/task.entity";
 
 export async function runSeed(dataSource?: DataSource): Promise<void> {
   const ownConnection = !dataSource;
@@ -78,6 +80,60 @@ async function _seed(dataSource: DataSource): Promise<void> {
     { user: users[2], project: projects[1], role: ProjectRole.ADMIN,   job: jobs[2] },
     { user: users[3], project: projects[2], role: ProjectRole.TRAINEE, job: jobs[3] },
     { user: users[4], project: projects[2], role: ProjectRole.ADMIN,   job: jobs[4] },
+  ]);
+
+  const onboardingRepo = dataSource.getRepository(OnBoarding);
+  const sampleOnboarding = await onboardingRepo.save(
+    onboardingRepo.create({ user: users[0], job: jobs[0], project: projects[0] })
+  );
+
+  const taskRepo = dataSource.getRepository(Task);
+  await taskRepo.save([
+    taskRepo.create({
+      order: 1,
+      title: 'Set Up Local Development Environment',
+      description: 'Clone the repo, install dependencies, configure .env, verify dev server starts.',
+      estimatedDays: 0.5,
+      isCompleted: false,
+      links: ['https://nodejs.org/en/docs', 'https://docs.npmjs.com/cli/v10'],
+      onboarding: sampleOnboarding,
+    }),
+    taskRepo.create({
+      order: 2,
+      title: 'Review Codebase Architecture',
+      description: 'Read through the module structure — controllers, services, repositories.',
+      estimatedDays: 1,
+      isCompleted: false,
+      links: [],
+      onboarding: sampleOnboarding,
+    }),
+    taskRepo.create({
+      order: 3,
+      title: 'Implement Product Listing Page',
+      description: 'Build the React component using TypeScript, following existing patterns.',
+      estimatedDays: 2,
+      isCompleted: false,
+      links: ['https://react.dev/reference/react', 'https://www.typescriptlang.org/docs/handbook/intro.html'],
+      onboarding: sampleOnboarding,
+    }),
+    taskRepo.create({
+      order: 4,
+      title: 'Write Unit Tests',
+      description: 'Add Jest tests covering render, empty state, and data-loaded states.',
+      estimatedDays: 0.5,
+      isCompleted: false,
+      links: ['https://jestjs.io/docs/getting-started'],
+      onboarding: sampleOnboarding,
+    }),
+    taskRepo.create({
+      order: 5,
+      title: 'Submit First Pull Request',
+      description: 'Open PR, address reviewer comments, get approval before merging.',
+      estimatedDays: 1,
+      isCompleted: false,
+      links: [],
+      onboarding: sampleOnboarding,
+    }),
   ]);
 
   console.log("Seeding completed successfully.");

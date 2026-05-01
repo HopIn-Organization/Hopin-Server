@@ -99,6 +99,7 @@ Rules:
 - The sum of all top-level task estimatedDays MUST equal exactly ${daysDuration} days — distribute the full duration across the tasks
 - Aim for 6 to 12 tasks total; adjust estimatedDays per task so they add up to ${daysDuration}
 - No single task should exceed half the total duration (${Math.ceil(daysDuration / 2)} days)
+- For each task, include a "links" field: an array of URLs pointing to relevant official documentation (e.g., MDN, official framework docs, GitHub READMEs). Only populate it when the task clearly involves a specific technology that has well-known public docs. If no such documentation applies, set "links" to []. Never invent or guess URLs.
 
 Respond ONLY with a valid JSON array of Task entity objects in this exact format, no explanation or markdown:
 [
@@ -109,19 +110,22 @@ Respond ONLY with a valid JSON array of Task entity objects in this exact format
     "estimatedDays": 1,
     "isCompleted": false,
     "onboardingId": ${onboardingId},
+    "links": ["https://example.com/relevant-official-doc"],
     "parent": null,
     "subtasks": [
       {
         "title": "First subtask example",
         "description": "Detailed description of the first subtask",
         "estimatedDays": 1,
-        "isCompleted": false
+        "isCompleted": false,
+        "links": []
       },
       {
         "title": "Second subtask example",
         "description": "Detailed description of the second subtask",
         "estimatedDays": 1,
-        "isCompleted": false
+        "isCompleted": false,
+        "links": ["https://docs.example.com/guide"]
       }
     ]
   }

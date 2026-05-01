@@ -25,6 +25,9 @@ export class Task {
   @Column({ type: 'boolean', name: 'is_completed', default: false })
   isCompleted!: boolean;
 
+  @Column({ type: 'text', array: true, name: 'links', nullable: true, default: '{}' })
+  links!: string[];
+
   @ManyToOne(() => Task, (task) => task.subtasks, { nullable: true })
   parent?: Task;
 

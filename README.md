@@ -129,6 +129,25 @@ The API runs on `http://localhost:3000` by default.
 - `DELETE /projects/members/:memberId`
   - Response: `204 No Content`
 
+### Tasks
+
+- `PATCH /tasks/:taskId/complete`
+  - Marks the task as completed (`isCompleted: true`).
+  - Response:
+    ```json
+    {
+      "task": {
+        "id": 1,
+        "title": "...",
+        "description": "...",
+        "estimatedDays": 3,
+        "isCompleted": true,
+        "order": 1,
+        "links": ["https://example.com/doc"]
+      }
+    }
+    ```
+
 ### Onboarding
 
 - `POST /onboarding/generate`

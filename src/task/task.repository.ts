@@ -10,9 +10,13 @@ export class TaskRepository {
   }
 
 
-async createTasks(data: Partial<Task>[]): Promise<Task[]> {
-  const tasks = this.taskRepository.create(data);
+  async createTasks(data: Partial<Task>[]): Promise<Task[]> {
+    const tasks = this.taskRepository.create(data);
+    return this.taskRepository.save(tasks);
+  }
 
-  return this.taskRepository.save(tasks);
-}
+  async completeTask(taskId: number): Promise<Task | null> {
+    await this.taskRepository.update(taskId, { isCompleted: true });
+    return this.taskRepository.findOneBy({ id: taskId });
+  }
 }

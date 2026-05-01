@@ -18,7 +18,11 @@ const isTaskObject = (value: unknown): value is Task => {
     (task.parent === undefined ||
       typeof task.parent === 'object' ||
       task.parent === null) &&
-    (task.subtasks === undefined || Array.isArray(task.subtasks))
+    (task.subtasks === undefined || Array.isArray(task.subtasks)) &&
+    (task.links === undefined ||
+      task.links === null ||
+      (Array.isArray(task.links) &&
+        (task.links as unknown[]).every((l) => typeof l === 'string')))
   );
 };
 
