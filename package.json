@@ -15,6 +15,7 @@
     "migration:show": "npm run typeorm -- migration:show",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
+    "db:reset": "ts-node src/scripts/reset-db.ts",
     "seed": "ts-node src/scripts/seed.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
