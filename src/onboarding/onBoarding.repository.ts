@@ -13,6 +13,7 @@ export class OnboardingRepository {
     return this.onboardingRepository.findOne({
       where: { id },
       relations: { user: true, job: true, project: true, tasks: true },
+      order: { tasks: { order: 'ASC' } },
     });
   }
 
@@ -23,6 +24,7 @@ export class OnboardingRepository {
     return this.onboardingRepository.findOne({
       where: { user: { id: userId }, job: { id: jobId } },
       relations: { user: true, job: true, project: true, tasks: true },
+      order: { tasks: { order: 'ASC' } },
     });
   }
 
@@ -30,6 +32,7 @@ export class OnboardingRepository {
     return this.onboardingRepository.find({
       where: { project: { id: projectId } },
       relations: { user: true, job: true, project: true, tasks: true },
+      order: { tasks: { order: 'ASC' } },
     });
   }
 
