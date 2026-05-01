@@ -34,6 +34,32 @@ export class TaskController {
     }
   };
 
+  deleteTask = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const taskId = parseInt(req.params.taskId as string);
+
+      if (isNaN(taskId)) {
+        res.status(400).json({ error: 'taskId must be a valid number' });
+        return;
+      }
+
+      const deleted = await this.taskService.deleteTask(taskId);
+
+      if (!deleted) {
+        res.status(404).json({ error: 'Task not found' });
+        return;
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
   upsertTask = async (
     req: Request,
     res: Response,

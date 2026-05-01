@@ -16,6 +16,10 @@ export class TaskService {
     return this.taskRepository.completeTask(taskId);
   }
 
+  async deleteTask(taskId: number): Promise<boolean> {
+    return this.taskRepository.deleteTask(taskId);
+  }
+
   async upsertTask(data: UpsertTaskInput): Promise<Task | null> {
     return this.taskRepository.upsertTask(data);
   }

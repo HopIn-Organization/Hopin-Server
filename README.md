@@ -155,6 +155,11 @@ The API runs on `http://localhost:3000` by default.
     ```
   - Response `404`: task with given `id` not found.
 
+- `DELETE /tasks/:taskId`
+  - Deletes the task.
+  - Response `204 No Content` on success.
+  - Response `404`: task not found.
+
 - `PATCH /tasks/:taskId/complete`
   - Marks the task as completed (`isCompleted: true`).
   - Response:

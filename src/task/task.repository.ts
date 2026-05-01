@@ -31,6 +31,11 @@ export class TaskRepository {
     return this.taskRepository.findOneBy({ id: taskId });
   }
 
+  async deleteTask(taskId: number): Promise<boolean> {
+    const result = await this.taskRepository.delete(taskId);
+    return (result.affected ?? 0) > 0;
+  }
+
   async upsertTask(data: UpsertTaskInput): Promise<Task | null> {
     const { id, onboardingId, parentId, ...rest } = data;
 
