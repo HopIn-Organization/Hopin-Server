@@ -150,22 +150,29 @@ The API runs on `http://localhost:3000` by default.
         "user": { ... },
         "job": { ... },
         "project": { ... },
-        "tasks": [ ... ]
+        "tasks": [ ... ],
+        "progress": 0
       }
     }
     ```
 
-- `GET /onboarding/user/:userId/job/:jobId/project/:projectId`
-  - Response: onboarding plan for that user/job/project combination, including a calculated `progress` field (0–100) representing completed task days out of total task days.
+- `GET /onboarding/user/:userId/job/:jobId`
+  - Response: onboarding plan for that user/job combination. `progress` (0–100) is a calculated field: sum of `estimatedDays` for completed tasks divided by total `estimatedDays`, multiplied by 100.
     ```json
     {
-      "onboarding": { ... },
-      "progress": 42.5
+      "onboarding": {
+        "id": 1,
+        "user": { ... },
+        "job": { ... },
+        "project": { ... },
+        "tasks": [ ... ],
+        "progress": 42.5
+      }
     }
     ```
 
 - `GET /onboarding/project/:projectId`
-  - Response: all onboarding plans belonging to the given project.
+  - Response: all onboarding plans for the given project, each including a `progress` field.
     ```json
     [
       {
@@ -173,7 +180,8 @@ The API runs on `http://localhost:3000` by default.
         "user": { ... },
         "job": { ... },
         "project": { ... },
-        "tasks": [ ... ]
+        "tasks": [ ... ],
+        "progress": 42.5
       }
     ]
     ```
