@@ -43,14 +43,30 @@ export class OnboardingController {
         return;
       }
 
-      const onBoarding = await this.onboardingService.generateBoard({
-        userId,
-        jobId,
-        documents,
-        daysDuration,
-      });
+      const onboardingId = await this.onboardingService.startGeneration({ userId, jobId, documents, daysDuration });
 
-      res.status(200).json({ onBoarding });
+      this.onboardingService.runGeneration(onboardingId, { userId, jobId, documents, daysDuration })
+        .catch((err) => console.error(`[Onboarding] Unhandled error in runGeneration id=${onboardingId}:`, err));
+
+      res.status(202).json({ onboardingId });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getOnboardingStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id as string, 10);
+      if (isNaN(id)) {
+        res.status(400).json({ error: 'id must be a valid number' });
+        return;
+      }
+      const result = await this.onboardingService.getOnboardingStatus(id);
+      if (!result) {
+        res.status(404).json({ error: 'Onboarding not found' });
+        return;
+      }
+      res.status(200).json(result);
     } catch (error) {
       next(error);
     }

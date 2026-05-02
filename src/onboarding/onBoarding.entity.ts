@@ -1,4 +1,5 @@
 import {
+  Column,
   Entity,
   PrimaryGeneratedColumn,
   ManyToOne,
@@ -10,6 +11,7 @@ import { User } from "../database/entities/user.entity";
 import { Task } from "../task/task.entity";
 import { Job } from "../job/job.entity";
 import { Project } from "../project/project.entity";
+import { OnboardingStatus } from "./onboarding.types";
 
 @Entity({ name: "onboarding" })
 export class OnBoarding {
@@ -40,6 +42,12 @@ export class OnBoarding {
 
   @RelationId((onboarding: OnBoarding) => onboarding.project)
   projectId!: number;
+
+  @Column({ type: 'varchar', default: 'pending' })
+  status!: OnboardingStatus;
+
+  @Column({ type: 'text', nullable: true, default: null })
+  failureReason!: string | null;
 
   @OneToMany(() => Task, task => task.onboarding)
   tasks!: Task[];

@@ -63,105 +63,103 @@ export class OnboardingService {
     return onboarding ? this.withProgress(onboarding) : null;
   }
 
-  async generateBoard(input: GenerateOnboardingInput): Promise<OnboardingWithProgress> {
-    const { userId, jobId, documents = [], daysDuration } = input;
-    console.log(`[Onboarding] Starting generation for userId=${userId}, jobId=${jobId}, daysDuration=${daysDuration}, documents=${documents.length}`);
+  async startGeneration(input: GenerateOnboardingInput): Promise<number> {
+    const { userId, jobId } = input;
 
     const userRepo = AppDataSource.getRepository(User);
     const jobRepo = AppDataSource.getRepository(Job);
 
     const [user, job] = await Promise.all([
-      userRepo.findOne({
-        where: { id: userId },
-        relations: { skills: true },
-      }),
-      jobRepo.findOne({
-        where: { id: jobId },
-        relations: { skills: true, project: true },
-      }),
+      userRepo.findOne({ where: { id: userId }, relations: { skills: true } }),
+      jobRepo.findOne({ where: { id: jobId }, relations: { skills: true, project: true } }),
     ]);
 
-    if (!user) {
-      console.error(`[Onboarding] User not found: userId=${userId}`);
-      throw new Error(`User with id ${userId} not found`);
-    }
-    if (!job) {
-      console.error(`[Onboarding] Job not found: jobId=${jobId}`);
-      throw new Error(`Job with id ${jobId} not found`);
-    }
-    if (!job.project) {
-      console.error(`[Onboarding] Job has no associated project: jobId=${jobId}`);
-      throw new Error(
-        `Job with id ${jobId} is not associated with any project`
-      );
-    }
-
-    console.log(`[Onboarding] Resolved user="${user.name}", job="${job.title}", project="${job.project.name}"`);
+    if (!user) throw new Error(`User with id ${userId} not found`);
+    if (!job) throw new Error(`Job with id ${jobId} not found`);
+    if (!job.project) throw new Error(`Job with id ${jobId} is not associated with any project`);
 
     const onboarding = await this.onboardingRepository.createOnboarding({
       userId: user.id,
       jobId: job.id,
       projectId: job.project.id,
     });
+
     console.log(`[Onboarding] Created onboarding record id=${onboarding.id}`);
+    return onboarding.id;
+  }
 
-    const prompt = buildOnboardingPrompt({
-      onboardingId: onboarding.id,
-      userName: user.name,
-      userExperienceYears: user.experienceYears,
-      userSkills: user.skills.map(s => s.name),
-      jobTitle: job.title,
-      jobRequiredSkills: job.skills.map(s => s.name),
-      projectName: job.project.name,
-      projectDescription: job.project.description,
-      documents,
-      daysDuration,
-    });
+  async runGeneration(onboardingId: number, input: GenerateOnboardingInput): Promise<void> {
+    const { userId, jobId, documents = [], daysDuration } = input;
 
-    console.log(`[Onboarding] Sending prompt to LLM for onboarding id=${onboarding.id}`);
-    const tasks = await this.llmService.generateOnboardingTasks(prompt);
-    console.log(`[Onboarding] LLM returned ${tasks.length} tasks for onboarding id=${onboarding.id}`);
+    try {
+      await this.onboardingRepository.updateStatus(onboardingId, 'generating');
 
-    const savedParents = await this.taskService.createTasks(
-      tasks.map(task => ({
-        ...task,
-        subtasks: undefined,
-        onboarding,
-      }))
-    );
-    console.log(`[Onboarding] Saved ${tasks.length} parent tasks for onboarding id=${onboarding.id}`);
+      const userRepo = AppDataSource.getRepository(User);
+      const jobRepo = AppDataSource.getRepository(Job);
 
-    const parentByOrder = new Map(savedParents.map((p) => [p.order, p]));
+      const [user, job] = await Promise.all([
+        userRepo.findOne({ where: { id: userId }, relations: { skills: true } }),
+        jobRepo.findOne({ where: { id: jobId }, relations: { skills: true, project: true } }),
+      ]);
 
-    const subtaskData: DeepPartial<Task>[] = tasks.flatMap((task) => {
-      const parent = parentByOrder.get(task.order);
-      if (!parent) return [];
-      return (task.subtasks ?? []).map((sub, j) => ({
-        title: sub.title,
-        description: sub.description,
-        estimatedDays: sub.estimatedDays,
-        links: sub.links,
-        isCompleted: false,
-        order: j + 1,
-        parent: { id: parent.id },
-      }));
-    });
+      if (!user) throw new Error(`User with id ${userId} not found`);
+      if (!job) throw new Error(`Job with id ${jobId} not found`);
+      if (!job.project) throw new Error(`Job with id ${jobId} is not associated with any project`);
 
-    if (subtaskData.length > 0) {
-      await this.taskService.createTasks(subtaskData);
-      console.log(`[Onboarding] Saved ${subtaskData.length} subtasks for onboarding id=${onboarding.id}`);
-    }
+      const prompt = buildOnboardingPrompt({
+        onboardingId,
+        userName: user.name,
+        userExperienceYears: user.experienceYears,
+        userSkills: user.skills.map(s => s.name),
+        jobTitle: job.title,
+        jobRequiredSkills: job.skills.map(s => s.name),
+        projectName: job.project.name,
+        projectDescription: job.project.description,
+        documents,
+        daysDuration,
+      });
 
-    const fullOnboarding = await this.getOnBoardingById(onboarding.id);
+      console.log(`[Onboarding] Sending prompt to LLM for onboarding id=${onboardingId}`);
+      const tasks = await this.llmService.generateOnboardingTasks(prompt);
+      console.log(`[Onboarding] LLM returned ${tasks.length} tasks for onboarding id=${onboardingId}`);
 
-    if (!fullOnboarding) {
-      console.error(`[Onboarding] Could not retrieve onboarding after save: id=${onboarding.id}`);
-      throw new Error(
-        `Onboarding with id ${onboarding.id} could not be retrieved after save`
+      // Fetch the OnBoarding entity for the relation reference
+      const onboardingEntity = { id: onboardingId } as OnBoarding;
+
+      const savedParents = await this.taskService.createTasks(
+        tasks.map(task => ({ ...task, subtasks: undefined, onboarding: onboardingEntity }))
       );
-    }
 
-    console.log(`[Onboarding] Generation complete for onboarding id=${onboarding.id}`);
-    return fullOnboarding;
+      const parentByOrder = new Map(savedParents.map((p) => [p.order, p]));
+
+      const subtaskData: DeepPartial<Task>[] = tasks.flatMap((task) => {
+        const parent = parentByOrder.get(task.order);
+        if (!parent) return [];
+        return (task.subtasks ?? []).map((sub, j) => ({
+          title: sub.title,
+          description: sub.description,
+          estimatedDays: sub.estimatedDays,
+          links: sub.links,
+          isCompleted: false,
+          order: j + 1,
+          parent: { id: parent.id },
+        }));
+      });
+
+      if (subtaskData.length > 0) {
+        await this.taskService.createTasks(subtaskData);
+      }
+
+      await this.onboardingRepository.updateStatus(onboardingId, 'ready');
+      console.log(`[Onboarding] Generation complete for onboarding id=${onboardingId}`);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error(`[Onboarding] Generation failed for onboarding id=${onboardingId}:`, reason);
+      await this.onboardingRepository.updateStatus(onboardingId, 'failed', reason);
+    }
+  }
+
+  async getOnboardingStatus(id: number) {
+    return this.onboardingRepository.getStatus(id);
   }
 }
