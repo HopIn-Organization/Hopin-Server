@@ -77,10 +77,15 @@ export class TaskRepository {
           await taskRepo.delete(toDelete);
         }
 
-    if (id !== undefined) {
-      await this.taskRepository.update(id, entityData);
-      return this.taskRepository.findOne({ where: { id }, relations: { subtasks: true } });
-    }
+        for (const sub of subtasks) {
+          const subData: DeepPartial<Task> = { ...sub, parent: { id: taskId } };
+          if (sub.id !== undefined) {
+            await taskRepo.update(sub.id, subData);
+          } else {
+            await taskRepo.save(taskRepo.create(subData));
+          }
+        }
+      }
 
       return taskRepo.findOne({ where: { id: taskId }, relations: { subtasks: true } });
     });
