@@ -8,6 +8,10 @@ export class ProjectMemberService {
         this.projectMemberRepository = new ProjectMemberRepository();
     }
 
+    async addMember(projectId: number, userId: number, jobId: number, role?: ProjectRole): Promise<ProjectMember> {
+        return this.projectMemberRepository.create({ projectId, userId, jobId, role });
+    }
+
     async updateMemberRole(projectId: number, memberId: number, role: ProjectRole): Promise<ProjectMember> {
         const member = await this.projectMemberRepository.findByProjectAndId(
             projectId,

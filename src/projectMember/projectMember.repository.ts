@@ -16,6 +16,12 @@ export class ProjectMemberRepository {
         });
     }
 
+    async findByUserAndProject(userId: number, projectId: number): Promise<ProjectMember | null> {
+        return this.repository.findOne({
+            where: { user: { id: userId }, project: { id: projectId } },
+        });
+    }
+
     async save(member: ProjectMember): Promise<ProjectMember> {
         return this.repository.save(member);
     }
@@ -24,5 +30,15 @@ export class ProjectMemberRepository {
         const result = await this.repository.delete({ id: memberId });
 
         return result.affected !== 0;
+    }
+
+    async create(data: { userId: number; projectId: number; jobId: number; role?: string }): Promise<ProjectMember> {
+        const member = this.repository.create({
+            user: { id: data.userId },
+            project: { id: data.projectId },
+            job: { id: data.jobId },
+            ...(data.role && { role: data.role as any }),
+        });
+        return this.repository.save(member);
     }
 }

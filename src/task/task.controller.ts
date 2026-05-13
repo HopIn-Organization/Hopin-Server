@@ -42,6 +42,12 @@ export class TaskController {
   ): Promise<void> => {
     try {
       const taskId = parseInt(req.params.taskId as string);
+      const { projectId } = req.body;
+
+      if (!projectId || typeof projectId !== 'number') {
+        res.status(400).json({ error: 'projectId is required' });
+        return;
+      }
 
       if (isNaN(taskId)) {
         res.status(400).json({ error: 'taskId must be a valid number' });
@@ -67,7 +73,12 @@ export class TaskController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { id, order, title, description, estimatedDays, isCompleted, links, onboardingId, parentId, subtasks } = req.body;
+      const { id, order, title, description, estimatedDays, isCompleted, links, onboardingId, parentId, subtasks, projectId } = req.body;
+
+      if (!projectId || typeof projectId !== 'number') {
+        res.status(400).json({ error: 'projectId is required' });
+        return;
+      }
 
       if (id === undefined) {
         if (typeof order !== 'number' || typeof title !== 'string' || typeof description !== 'string' || typeof estimatedDays !== 'number') {

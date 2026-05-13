@@ -33,12 +33,16 @@ export class JobController {
 
   createJob = async (req: Request, res: Response): Promise<void> => {
     try {
-      const jobData = req.body;
+      const { projectId, ...jobData } = req.body;
       if (!jobData || !jobData.title) {
         res.status(400).json({ message: 'Title is required' });
         return;
       }
-      const job = await this.jobService.createJob(jobData);
+      if (!projectId || typeof projectId !== 'number') {
+        res.status(400).json({ message: 'projectId is required' });
+        return;
+      }
+      const job = await this.jobService.createJob({ ...jobData, project: { id: projectId } });
       res.status(201).json(job);
     } catch (error) {
       res.status(500).json({ message: 'Error creating job' });
@@ -48,7 +52,12 @@ export class JobController {
   addSkillsToJob = async (req: Request, res: Response): Promise<void> => {
     try {
       const jobId = parseInt(req.params.jobId as string);
-      const { skills } = req.body;
+      const { skills, projectId } = req.body;
+
+      if (!projectId || typeof projectId !== 'number') {
+        res.status(400).json({ message: 'projectId is required' });
+        return;
+      }
 
       if (!Array.isArray(skills) || !skills.every((s) => typeof s === 'string')) {
         res.status(400).json({ message: 'Skills should be an array of strings' });
@@ -56,7 +65,7 @@ export class JobController {
       }
 
       const job = await this.jobService.addSkillsToJob(jobId, skills);
-      
+
       if (job) {
         res.json(job);
       } else {
