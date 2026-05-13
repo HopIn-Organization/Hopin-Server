@@ -4,7 +4,6 @@ import userRoutes from '../user/user.routes';
 import jobRoutes from '../job/job.routes';
 import projectRoutes from '../project/project.routes';
 import taskRoutes from '../task/task.routes';
-import { authenticateAccessToken } from '../auth/auth.middleware';
 
 const router = Router();
 
@@ -17,9 +16,9 @@ router.get('/health', (_req: Request, res: Response) => {
 });
 
 router.use('/users', userRoutes);
-router.use('/jobs', authenticateAccessToken, jobRoutes);
-router.use('/projects', authenticateAccessToken, projectRoutes);
-router.use('/onboarding', authenticateAccessToken, onboardingRoutes);
-router.use('/tasks', authenticateAccessToken, taskRoutes);
+router.use('/jobs', jobRoutes);
+router.use('/projects', projectRoutes);
+router.use('/onboarding', onboardingRoutes);
+router.use('/tasks', taskRoutes);
 
 export default router;
