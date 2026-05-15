@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import bcrypt from "bcryptjs";
 import { DataSource } from "typeorm";
 import { AppDataSource } from "../database/data-source";
 import { User } from "../database/entities/user.entity";
@@ -58,13 +59,15 @@ async function _seed(dataSource: DataSource): Promise<void> {
     await jobRepo.save(jobs[i]);
   }
 
+  const passwordHash = await bcrypt.hash("password123", 12);
+
   const userRepo = dataSource.getRepository(User);
   const users = await userRepo.save([
-    { name: "Alice Johnson", email: "alice@example.com", experienceYears: 5 },
-    { name: "Bob Smith", email: "bob@example.com", experienceYears: 3 },
-    { name: "Charlie Brown", email: "charlie@example.com", experienceYears: 7 },
-    { name: "Diana Prince", email: "diana@example.com", experienceYears: 4 },
-    { name: "Eve Wilson", email: "eve@example.com", experienceYears: 6 },
+    { name: "Alice Johnson", email: "alice@example.com", passwordHash, experienceYears: 5 },
+    { name: "Bob Smith", email: "bob@example.com", passwordHash, experienceYears: 3 },
+    { name: "Charlie Brown", email: "charlie@example.com", passwordHash, experienceYears: 7 },
+    { name: "Diana Prince", email: "diana@example.com", passwordHash, experienceYears: 4 },
+    { name: "Eve Wilson", email: "eve@example.com", passwordHash, experienceYears: 6 },
   ]);
 
   const userSkillsAssignments = [[0, 1, 3], [0, 2], [0, 1, 2, 3], [4, 5], [6, 7]];
