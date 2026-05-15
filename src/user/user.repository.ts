@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../database/data-source';
 import { User } from '../database/entities/user.entity';
+import { Skill } from '../skill/skill.entity';
 
 export class UserRepository {
   private userRepository: Repository<User>;
@@ -65,5 +66,33 @@ export class UserRepository {
       refreshTokenHash: null,
       refreshTokenExpiresAt: null,
     });
+  }
+
+  async updateProfile(
+    id: number,
+    data: {
+      name: string;
+      birthDate: string | null;
+      workExperience: Array<{ id: string; title: string; years: number }>;
+      skills: Skill[];
+    }
+  ): Promise<User | null> {
+    await this.userRepository.update(id, {
+      name: data.name,
+      birthDate: data.birthDate,
+      workExperience: data.workExperience,
+    });
+
+    const manager = AppDataSource.manager;
+    await manager.query(`DELETE FROM user_skills WHERE user_id = $1`, [id]);
+    if (data.skills.length > 0) {
+      const placeholders = data.skills.map((_, i) => `($1, $${i + 2})`).join(', ');
+      await manager.query(
+        `INSERT INTO user_skills (user_id, skill_id) VALUES ${placeholders}`,
+        [id, ...data.skills.map((s) => s.id)]
+      );
+    }
+
+    return this.userRepository.findOne({ where: { id }, relations: { skills: true } });
   }
 }

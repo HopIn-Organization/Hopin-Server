@@ -6,6 +6,7 @@ import userRoutes from '../user/user.routes';
 import jobRoutes from '../job/job.routes';
 import projectRoutes from '../project/project.routes';
 import taskRoutes from '../task/task.routes';
+import profileRoutes from '../profile/profile.routes';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use('/jobs', authenticateAccessToken, jobRoutes);
 router.use('/projects', authenticateAccessToken, projectRoutes);
 router.use('/onboarding', authenticateAccessToken, onboardingRoutes);
 router.use('/tasks', authenticateAccessToken, taskRoutes);
+router.use('/profile', authenticateAccessToken, profileRoutes);
 
 export default router;

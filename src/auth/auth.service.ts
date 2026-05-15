@@ -59,7 +59,6 @@ export class AuthService {
             name,
             email,
             passwordHash,
-            experienceYears: null,
         });
     }
 

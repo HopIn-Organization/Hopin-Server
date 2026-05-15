@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { AfterLoad, Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ProjectMember } from '../../projectMember/projectMember.entity';
 import { Skill } from '../../skill/skill.entity';
 
@@ -27,8 +27,18 @@ export class User {
   })
   refreshTokenExpiresAt!: Date | null;
 
-  @Column({ type: 'integer', name: 'experience_years', nullable: true })
-  experienceYears!: number | null;
+  experienceYears!: number;
+
+  @AfterLoad()
+  computeExperienceYears() {
+    this.experienceYears = (this.workExperience ?? []).reduce((sum, w) => sum + w.years, 0);
+  }
+
+  @Column({ type: 'text', name: 'birth_date', nullable: true })
+  birthDate!: string | null;
+
+  @Column({ type: 'jsonb', name: 'work_experience', nullable: true, default: '[]' })
+  workExperience!: Array<{ id: string; title: string; years: number }>;
 
   @ManyToMany(() => Skill, (skill) => skill.users)
   skills!: Skill[];
