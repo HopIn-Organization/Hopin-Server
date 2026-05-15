@@ -14,7 +14,12 @@ export class OnboardingController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { userId, jobId, documents, daysDuration } = req.body;
+      const { userId, jobId, documents, daysDuration, projectId } = req.body;
+
+      if (!projectId || typeof projectId !== 'number') {
+        res.status(400).json({ error: 'projectId is required' });
+        return;
+      }
 
       if (!userId || !jobId) {
         res.status(400).json({ error: 'userId and jobId are required' });
@@ -140,7 +145,7 @@ export class OnboardingController {
         return;
       }
 
-      res.status(200).json( onboarding );
+      res.status(200).json(onboarding);
     } catch (error) {
       next(error);
     }
