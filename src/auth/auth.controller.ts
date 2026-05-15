@@ -14,13 +14,18 @@ export class AuthController {
     try {
       const { name, email, password } = req.body;
 
-      if (!name || !email || !password) {
-        res.status(400).json({ message: 'name, email and password are required' });
+      if (!email || !password) {
+        res.status(400).json({ message: 'email and password are required' });
         return;
       }
 
-      const user = await this.authService.register(name, String(email).toLowerCase(), String(password));
-      res.status(201).json({ id: user.id, name: user.name, email: user.email });
+      const normalizedEmail = String(email).toLowerCase();
+      const defaultName = name || normalizedEmail.split('@')[0];
+      await this.authService.register(defaultName, normalizedEmail, String(password));
+
+      const tokens = await this.authService.login(normalizedEmail, String(password));
+      this.setRefreshCookie(res, tokens.refreshToken);
+      res.status(201).json({ accessToken: tokens.accessToken });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Registration failed';
       res.status(400).json({ message });
