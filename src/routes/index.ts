@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import { authenticateAccessToken } from '../auth/auth.middleware';
+import authRoutes from '../auth/auth.routes';
 import onboardingRoutes from '../onboarding/onboarding.routes';
 import userRoutes from '../user/user.routes';
 import jobRoutes from '../job/job.routes';
@@ -15,10 +17,11 @@ router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
 
-router.use('/users', userRoutes);
-router.use('/jobs', jobRoutes);
-router.use('/projects', projectRoutes);
-router.use('/onboarding', onboardingRoutes);
-router.use('/tasks', taskRoutes);
+router.use('/', authRoutes);
+router.use('/users', authenticateAccessToken, userRoutes);
+router.use('/jobs', authenticateAccessToken, jobRoutes);
+router.use('/projects', authenticateAccessToken, projectRoutes);
+router.use('/onboarding', authenticateAccessToken, onboardingRoutes);
+router.use('/tasks', authenticateAccessToken, taskRoutes);
 
 export default router;
