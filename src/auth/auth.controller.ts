@@ -67,6 +67,27 @@ export class AuthController {
     }
   };
 
+  googleAuth = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { token, mode } = req.body;
+      if (!token || typeof token !== 'string') {
+        res.status(400).json({ message: 'Google token is required' });
+        return;
+      }
+      if (mode !== 'register' && mode !== 'login') {
+        res.status(400).json({ message: 'mode must be "register" or "login"' });
+        return;
+      }
+      const result = await this.authService.googleAuth(token, mode);
+      this.setRefreshCookie(res, result.refreshToken);
+      res.json({ accessToken: result.accessToken, user: result.user });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google authentication failed';
+      const status = message.includes('already exists') ? 409 : 401;
+      res.status(status).json({ message });
+    }
+  };
+
   logout = async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user?.id;

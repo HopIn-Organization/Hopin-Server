@@ -111,6 +111,27 @@ export class AuthService {
         return this.issueAndPersistTokens(user);
     }
 
+    async googleAuth(token: string, mode: 'register' | 'login'): Promise<{ accessToken: string; refreshToken: string; user: { email: string; name: string } }> {
+        const decoded = jwt.decode(token) as Record<string, unknown> | null;
+        if (!decoded?.email || !decoded?.name) {
+            throw new Error('Invalid Google token');
+        }
+        const email = String(decoded.email).toLowerCase();
+        const name = String(decoded.name);
+
+        let user = await this.userRepository.findByEmail(email);
+
+        if (mode === 'register') {
+            if (user) throw new Error('An account with this email already exists. Please sign in instead.');
+            user = await this.userRepository.create({ email, name });
+        } else {
+            if (!user) throw new Error('No account found with this email. Please sign up first.');
+        }
+
+        const tokens = await this.issueAndPersistTokens(user);
+        return { ...tokens, user: { email: user.email, name: user.name } };
+    }
+
     async logout(userId: number): Promise<void> {
         await this.userRepository.clearRefreshToken(userId);
     }
