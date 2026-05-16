@@ -7,6 +7,7 @@ const authController = new AuthController();
 
 router.post('/auth/register', authController.register);
 router.post('/auth/login', authController.login);
+router.post('/auth/google', authController.googleAuth);
 router.post('/auth/refresh', authController.refresh);
 router.post('/auth/logout', authenticateAccessToken, authController.logout);
 

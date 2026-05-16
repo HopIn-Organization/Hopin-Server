@@ -14,13 +14,18 @@ export class AuthController {
     try {
       const { name, email, password } = req.body;
 
-      if (!name || !email || !password) {
-        res.status(400).json({ message: 'name, email and password are required' });
+      if (!email || !password) {
+        res.status(400).json({ message: 'email and password are required' });
         return;
       }
 
-      const user = await this.authService.register(name, String(email).toLowerCase(), String(password));
-      res.status(201).json({ id: user.id, name: user.name, email: user.email });
+      const normalizedEmail = String(email).toLowerCase();
+      const defaultName = name || normalizedEmail.split('@')[0];
+      await this.authService.register(defaultName, normalizedEmail, String(password));
+
+      const tokens = await this.authService.login(normalizedEmail, String(password));
+      this.setRefreshCookie(res, tokens.refreshToken);
+      res.status(201).json({ accessToken: tokens.accessToken });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Registration failed';
       res.status(400).json({ message });
@@ -59,6 +64,27 @@ export class AuthController {
     } catch (_error) {
       this.clearRefreshCookie(res);
       res.status(401).json({ message: 'Invalid refresh token' });
+    }
+  };
+
+  googleAuth = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { token, mode } = req.body;
+      if (!token || typeof token !== 'string') {
+        res.status(400).json({ message: 'Google token is required' });
+        return;
+      }
+      if (mode !== 'register' && mode !== 'login') {
+        res.status(400).json({ message: 'mode must be "register" or "login"' });
+        return;
+      }
+      const result = await this.authService.googleAuth(token, mode);
+      this.setRefreshCookie(res, result.refreshToken);
+      res.json({ accessToken: result.accessToken, user: result.user });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google authentication failed';
+      const status = message.includes('already exists') ? 409 : 401;
+      res.status(status).json({ message });
     }
   };
 

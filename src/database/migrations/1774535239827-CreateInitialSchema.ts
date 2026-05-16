@@ -32,9 +32,14 @@ export class CreateInitialSchema1774535239827 implements MigrationInterface {
             CREATE TABLE "users" (
                 "id" SERIAL PRIMARY KEY,
                 "name" text NOT NULL,
+                "email" text NOT NULL,
+                "password_hash" text,
+                "refresh_token_hash" text,
+                "refresh_token_expires_at" TIMESTAMPTZ,
                 "experience_years" integer
             )
         `);
+        await queryRunner.query(`CREATE UNIQUE INDEX "UQ_users_email" ON "users" ("email")`);
 
         await queryRunner.query(`
             CREATE TABLE "job_skills" (
@@ -100,6 +105,7 @@ export class CreateInitialSchema1774535239827 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."IDX_7c0a3c52e77f9d9d839fdbb14b"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_4f7427e13d249156f37669e712"`);
         await queryRunner.query(`DROP TABLE "job_skills"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."UQ_users_email"`);
         await queryRunner.query(`DROP TABLE "users"`);
         await queryRunner.query(`DROP INDEX "public"."uq_skills_name"`);
         await queryRunner.query(`DROP TABLE "skills"`);
