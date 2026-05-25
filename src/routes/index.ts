@@ -7,6 +7,7 @@ import jobRoutes from '../job/job.routes';
 import projectRoutes from '../project/project.routes';
 import taskRoutes from '../task/task.routes';
 import profileRoutes from '../profile/profile.routes';
+import documentRoutes from '../document/document.routes';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.use('/', authRoutes);
 router.use('/users', authenticateAccessToken, userRoutes);
 router.use('/jobs', authenticateAccessToken, jobRoutes);
 router.use('/projects', authenticateAccessToken, projectRoutes);
+router.use('/projects', authenticateAccessToken, documentRoutes);
 router.use('/onboarding', authenticateAccessToken, onboardingRoutes);
 router.use('/tasks', authenticateAccessToken, taskRoutes);
 router.use('/profile', authenticateAccessToken, profileRoutes);
