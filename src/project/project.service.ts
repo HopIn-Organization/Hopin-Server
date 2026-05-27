@@ -27,6 +27,10 @@ export class ProjectService {
     return this.projectRepository.findAll();
   }
 
+  async getProjectsByUser(userId: number): Promise<Project[]> {
+    return this.projectRepository.findByUserId(userId);
+  }
+
   async getProjectById(id: number): Promise<Project | null> {
     return this.projectRepository.findById(id);
   }
