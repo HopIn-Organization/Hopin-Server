@@ -28,19 +28,40 @@
    docker-compose up -d
    ```
 
-5. Run TypeORM migrations:
+5. Start MinIO (S3-compatible storage) for document uploads:
+
+   ```bash
+   docker run -d --name minio -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address ":9001"
+   ```
+
+   Then create a bucket:
+   - Open the MinIO Console at `http://localhost:9001`
+   - Log in with `minioadmin` / `minioadmin`
+   - Create a bucket named `hopin-documents` (or match your `S3_BUCKET_NAME` env var)
+
+   Your `.env` should include:
+
+   ```
+   S3_ENDPOINT=http://localhost:9000
+   S3_FORCE_PATH_STYLE=true
+   AWS_ACCESS_KEY_ID=minioadmin
+   AWS_SECRET_ACCESS_KEY=minioadmin
+   S3_BUCKET_NAME=hopin-documents
+   ```
+
+6. Run TypeORM migrations:
 
    ```bash
    npm run migration:run
    ```
 
-6. Seed sample data:
+7. Seed sample data:
 
    ```bash
    npm run seed
    ```
 
-7. Run the app in development mode:
+8. Run the app in development mode:
 
    ```bash
    npm run dev
