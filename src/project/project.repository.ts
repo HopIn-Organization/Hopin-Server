@@ -16,6 +16,14 @@ export class ProjectRepository {
     });
   }
 
+  async findByUserId(userId: number): Promise<Project[]> {
+    return this.repository.find({
+      where: { members: { user: { id: userId } } },
+      relations: { jobs: { skills: true }, members: { user: true, job: true } },
+      order: { id: "DESC" },
+    });
+  }
+
   async findById(id: number): Promise<Project | null> {
     return this.repository.findOne({
       where: { id },
