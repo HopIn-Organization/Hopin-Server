@@ -1,6 +1,7 @@
 import { Repository } from "typeorm";
 import { AppDataSource } from "../database/data-source";
 import { ProjectMember } from "./projectMember.entity";
+import { log } from "console";
 
 export class ProjectMemberRepository {
     private repository: Repository<ProjectMember>;
@@ -39,6 +40,7 @@ export class ProjectMemberRepository {
             job: { id: data.jobId },
             ...(data.role && { role: data.role as any }),
         });
+
         return this.repository.save(member);
     }
 }
