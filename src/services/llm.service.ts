@@ -2,6 +2,7 @@ import { DeepPartial } from 'typeorm';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Task } from '../task/task.entity';
 import { reportLLMTrace } from '../utils/langfuse';
+import type { LangfuseTrace } from '../utils/langfuse';
 
 type GeminiTask = {
   order?: number | string;
@@ -95,7 +96,7 @@ const normalizeTask = (
   };
 };
 
-const MODEL_NAME = 'gemini-3.5-flash';
+const MODEL_NAME = 'gemini-3-flash-preview';
 
 export class LLMService {
   private genAI: GoogleGenerativeAI;
@@ -114,7 +115,7 @@ export class LLMService {
       traceId?: string;
       sessionId?: string;
       userId?: string;
-      trace?: any;
+      trace?: LangfuseTrace;
     }
   ): Promise<DeepPartial<Task>[]> {
     const model = this.genAI.getGenerativeModel({
@@ -130,13 +131,13 @@ export class LLMService {
 
     const usage = usageMetadata
       ? {
-          input: usageMetadata.promptTokenCount,
-          output: usageMetadata.candidatesTokenCount,
-          total:
-            (usageMetadata.promptTokenCount || 0) +
-            (usageMetadata.candidatesTokenCount || 0),
-          unit: 'TOKENS' as const,
-        }
+        input: usageMetadata.promptTokenCount,
+        output: usageMetadata.candidatesTokenCount,
+        total:
+          (usageMetadata.promptTokenCount || 0) +
+          (usageMetadata.candidatesTokenCount || 0),
+        unit: 'TOKENS' as const,
+      }
       : undefined;
 
     let rawResponse: unknown;
@@ -161,8 +162,8 @@ export class LLMService {
     const rawTasks = Array.isArray(rawResponse)
       ? rawResponse
       : rawResponse && typeof rawResponse === 'object' && Array.isArray((rawResponse as { tasks?: unknown }).tasks)
-      ? (rawResponse as { tasks: unknown }).tasks
-      : undefined;
+        ? (rawResponse as { tasks: unknown }).tasks
+        : undefined;
 
     if (!Array.isArray(rawTasks)) {
       await reportLLMTrace({

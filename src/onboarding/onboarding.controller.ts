@@ -54,7 +54,7 @@ export class OnboardingController {
         return;
       }
 
-      const trace = (req as any).langfuseTrace;
+      const trace = req.langfuseTrace;
 
       const onboardingId =
         await this.onboardingService.startGeneration({

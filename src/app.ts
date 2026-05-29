@@ -28,9 +28,11 @@ app.use((_req: Request, res: Response) => {
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
 
-  const trace = (req as any).langfuseTrace;
+  const trace = req.langfuseTrace;
   if (trace) {
     trace.update({
+      level: 'ERROR',
+      statusMessage: err.message,
       metadata: {
         error: err.message,
         status: 'error',

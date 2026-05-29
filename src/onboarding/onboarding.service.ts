@@ -6,6 +6,7 @@ import { buildOnboardingPrompt } from '../prompts/onboarding.prompt';
 import { LLMService } from '../services/llm.service';
 import { Task } from '../task/task.entity';
 import { TaskService } from '../task/task.service';
+import type { LangfuseTrace } from '../utils/langfuse';
 import { OnBoarding } from './onBoarding.entity';
 import { OnboardingRepository } from './onBoarding.repository';
 
@@ -14,7 +15,7 @@ export interface GenerateOnboardingInput {
   jobId: number;
   documents?: string[];
   daysDuration: number;
-  trace?: any;
+  trace?: LangfuseTrace;
 }
 
 export type OnboardingWithProgress = OnBoarding & { progress: number };
