@@ -1,0 +1,17 @@
+Backend Developer — Role Guide (E-Commerce Platform)
+
+Responsibilities
+- Design and implement REST API endpoints for products, orders, carts, and users.
+- Write and run TypeORM migrations for all database schema changes.
+- Optimize slow queries; maintain and document database indexes.
+- Ensure all endpoints are covered by integration tests hitting a real PostgreSQL instance.
+- Review backend PRs with focus on query performance and security (input validation, auth guards).
+
+Onboarding Checklist
+1. Set up the local PostgreSQL database and run all existing migrations.
+2. Review the API surface in the project README and explore the route files.
+3. Shadow a senior developer on an active feature ticket for at least two days.
+4. Implement a small bug fix or enhancement as your first task.
+
+Key Contacts
+Tech Lead : Bob Smith

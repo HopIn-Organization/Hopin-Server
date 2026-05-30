@@ -17,6 +17,7 @@
     "test:watch": "jest --watch",
     "db:reset": "ts-node src/scripts/reset-db.ts",
     "seed": "ts-node src/scripts/seed.ts",
+    "seed:s3": "ts-node src/scripts/s3-seed.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\"",

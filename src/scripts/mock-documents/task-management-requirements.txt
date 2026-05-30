@@ -1,0 +1,14 @@
+Task Management App — Requirements
+
+Core Features
+1. Users can create projects and invite collaborators with configurable roles.
+2. Within a project, users create tasks with titles, descriptions, due dates, and assignees.
+3. Tasks support sub-tasks for breaking down work into smaller steps.
+4. Drag-and-drop Kanban board for status management (Backlog → In Progress → Review → Done).
+5. Activity feed per task showing all edits, comments, and status changes with timestamps.
+
+Non-Functional Requirements
+- API p95 response time under 200 ms under normal load.
+- Real-time updates via WebSocket so collaborators see changes without a page refresh.
+- Mobile-responsive UI supporting the latest two versions of Chrome, Firefox, and Safari.
+- All data persisted in PostgreSQL; no client-side data loss on browser close.

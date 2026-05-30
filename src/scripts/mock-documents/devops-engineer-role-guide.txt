@@ -1,0 +1,16 @@
+DevOps Engineer — Role Guide (Data Analytics Dashboard)
+
+Responsibilities
+- Manage Docker-based CI/CD pipelines: GitHub Actions → ECR image build → ECS deployment.
+- Provision and maintain AWS infrastructure using Terraform; all changes reviewed via PR.
+- Monitor system health with CloudWatch and Grafana; own the on-call rotation for infra alerts.
+- Enforce security best practices: secrets in AWS Secrets Manager, no hardcoded credentials in code.
+
+Onboarding Checklist
+1. Request AWS IAM access with least-privilege permissions from the team lead.
+2. Review the Terraform state and existing ECS task definitions for the dashboard services.
+3. Shadow Eve Wilson during the next scheduled deployment to get familiar with the release process.
+4. Take ownership of one non-critical alert and resolve it end-to-end as your first task.
+
+Key Tools
+Docker, GitHub Actions, AWS (ECS, ECR, RDS, S3, CloudWatch, Secrets Manager), Terraform, Grafana

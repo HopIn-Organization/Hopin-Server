@@ -10,7 +10,9 @@ import { ProjectMember } from '../projectMember/projectMember.entity';
 import { Skill } from '../skill/skill.entity';
 import { OnBoarding } from '../onboarding/onBoarding.entity';
 import { Task } from '../task/task.entity';
+import { ProjectDocument } from '../document/document.entity';
 import { runSeed } from './seed';
+import { runS3Seed } from './s3-seed';
 
 const ResetDataSource = new DataSource({
   type: 'postgres',
@@ -20,7 +22,7 @@ const ResetDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   synchronize: false,
-  entities: [User, Job, Project, ProjectMember, Skill, OnBoarding, Task],
+  entities: [User, Job, Project, ProjectMember, Skill, OnBoarding, Task, ProjectDocument],
   migrations: [path.join(__dirname, '../database/migrations/*.{ts,js}')],
 });
 
@@ -36,6 +38,7 @@ async function resetDb() {
   await ResetDataSource.runMigrations();
   console.log('All migrations applied.');
 
+  await runS3Seed();
   await runSeed(ResetDataSource);
 
   await ResetDataSource.destroy();

@@ -1,0 +1,16 @@
+Data Engineer — Role Guide (Data Analytics Dashboard)
+
+Responsibilities
+- Build and maintain Python ETL pipelines that ingest Kafka events into PostgreSQL.
+- Write SQL transformation jobs to aggregate raw events into reporting tables.
+- Monitor pipeline health and configure alerting for data quality issues (missing data, schema drift).
+- Document data models and schema changes in the team wiki after every release.
+
+Onboarding Checklist
+1. Request access to the Kafka cluster and review the currently active topics.
+2. Run the existing ETL pipelines locally using the provided sample data fixtures.
+3. Review the analytics schema ERD and aggregation logic with Diana Prince.
+4. Pick up a data-quality improvement task as your first deliverable.
+
+Tools & Stack
+Python 3.12, Apache Kafka, PostgreSQL, dbt (under evaluation), Grafana for pipeline monitoring

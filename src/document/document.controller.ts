@@ -1,6 +1,28 @@
 import { Request, Response } from "express";
 import { DocumentService } from "./document.service";
 
+const BUCKET = process.env.S3_BUCKET_NAME || "hopin-project-documents";
+const MINIO_CONSOLE = process.env.S3_ENDPOINT
+    ? process.env.S3_ENDPOINT.replace(/:9000$/, ":9001")
+    : "http://localhost:9001";
+
+function isBucketNotFound(error: any): boolean {
+    return (
+        error?.name === "NoSuchBucket" ||
+        error?.Code === "NoSuchBucket" ||
+        String(error?.message).includes("NoSuchBucket")
+    );
+}
+
+function logBucketSetupRequired(): void {
+    console.error(
+        `\n[S3] ❌ Bucket "${BUCKET}" does not exist.\n` +
+        `     ➜  Open the MinIO console: ${MINIO_CONSOLE}\n` +
+        `     ➜  Log in with: minioadmin / minioadmin\n` +
+        `     ➜  Create a bucket named: ${BUCKET}\n`,
+    );
+}
+
 interface ProjectParams extends Record<string, string> {
     projectId: string;
 }
@@ -60,6 +82,11 @@ export class DocumentController {
         } catch (error: any) {
             if (error.message.includes("Cannot upload") || error.message.includes("unsupported type")) {
                 res.status(400).json({ message: error.message });
+            } else if (isBucketNotFound(error)) {
+                logBucketSetupRequired();
+                res.status(503).json({
+                    message: `Storage not configured: bucket "${BUCKET}" does not exist. Create it in MinIO at ${MINIO_CONSOLE}.`,
+                });
             } else {
                 res.status(500).json({ message: "Error uploading documents" });
             }
@@ -82,6 +109,11 @@ export class DocumentController {
         } catch (error: any) {
             if (error.message.includes("Cannot upload") || error.message.includes("unsupported type")) {
                 res.status(400).json({ message: error.message });
+            } else if (isBucketNotFound(error)) {
+                logBucketSetupRequired();
+                res.status(503).json({
+                    message: `Storage not configured: bucket "${BUCKET}" does not exist. Create it in MinIO at ${MINIO_CONSOLE}.`,
+                });
             } else {
                 res.status(500).json({ message: "Error uploading job documents" });
             }
