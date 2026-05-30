@@ -2,12 +2,16 @@ import 'reflect-metadata';
 import app from './app';
 import { initializeDatabase } from './database';
 import { shutdownLangfuse } from './utils/langfuse';
+import { S3Service } from './document/s3.service';
 
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
   try {
     await initializeDatabase();
+
+    const s3Service = new S3Service();
+    await s3Service.ensureBucketExists();
 
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

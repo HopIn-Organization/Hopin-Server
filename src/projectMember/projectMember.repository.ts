@@ -33,6 +33,10 @@ export class ProjectMemberRepository {
         return result.affected !== 0;
     }
 
+    async deleteByProjectId(projectId: number): Promise<void> {
+        await this.repository.delete({ project: { id: projectId } });
+    }
+
     async create(data: { userId: number; projectId: number; jobId: number; role?: string }): Promise<ProjectMember> {
         const member = this.repository.create({
             user: { id: data.userId },

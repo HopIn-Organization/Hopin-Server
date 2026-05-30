@@ -16,6 +16,10 @@ export class DocumentRepository {
         });
     }
 
+    async findAllByProjectId(projectId: number): Promise<ProjectDocument[]> {
+        return this.repository.find({ where: { projectId } });
+    }
+
     async findByJobId(projectId: number, jobId: number): Promise<ProjectDocument[]> {
         return this.repository.find({
             where: { projectId, jobId },
