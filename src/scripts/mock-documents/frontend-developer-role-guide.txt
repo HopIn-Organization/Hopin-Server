@@ -1,0 +1,18 @@
+Frontend Developer — Role Guide (E-Commerce Platform)
+
+Responsibilities
+- Build and maintain React components for the storefront, cart, and checkout flows.
+- Own TypeScript type definitions for all frontend data models.
+- Collaborate with the design team to implement pixel-accurate UI from Figma specs.
+- Write unit and integration tests with Jest and React Testing Library.
+- Participate in code reviews with a focus on component reusability and accessibility.
+
+Onboarding Checklist
+1. Clone the client repository and run the local dev server (npm run dev).
+2. Complete the codebase walkthrough with your assigned buddy.
+3. Pick up a "good first issue" ticket tagged frontend in the issue tracker.
+4. Submit your first PR within your first full week.
+
+Key Contacts
+Engineering Manager : Alice Johnson
+Design Lead         : check team directory

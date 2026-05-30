@@ -9,6 +9,9 @@ import { Project } from "../project/project.entity";
 import { ProjectMember, ProjectRole } from "../projectMember/projectMember.entity";
 import { Skill } from "../skill/skill.entity";
 import { Task } from "../task/task.entity";
+import { ProjectDocument } from "../document/document.entity";
+import { SEED_DOCUMENTS } from "./seed-document-definitions";
+import { runS3Seed } from "./s3-seed";
 
 export async function runSeed(dataSource?: DataSource): Promise<void> {
   const ownConnection = !dataSource;
@@ -300,12 +303,26 @@ async function _seed(dataSource: DataSource): Promise<void> {
     }),
   ]);
 
+  const docRepo = dataSource.getRepository(ProjectDocument);
+  await docRepo.save(
+    SEED_DOCUMENTS.map((def) => ({
+      originalName: def.originalName,
+      s3Key: def.s3Key,
+      mimeType: def.mimeType,
+      sizeBytes: def.content.byteLength,
+      project: projects[def.projectIndex],
+      job: def.jobIndex !== null ? jobs[def.jobIndex] : null,
+    })),
+  );
+
   console.log("Seeding completed successfully.");
 }
 
 if (require.main === module) {
-  runSeed().catch((err) => {
-    console.error("Error during seeding:", err);
-    process.exit(1);
-  });
+  runS3Seed()
+    .then(() => runSeed())
+    .catch((err) => {
+      console.error("Error during seeding:", err);
+      process.exit(1);
+    });
 }

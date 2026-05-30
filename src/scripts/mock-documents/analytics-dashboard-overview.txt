@@ -1,0 +1,18 @@
+Data Analytics Dashboard — Overview
+
+Purpose
+Provide real-time visibility into business KPIs by ingesting event streams, transforming them
+with scheduled Python jobs, and rendering interactive charts in the browser.
+
+Data Sources
+- Application event logs shipped via Kafka topics (user actions, transactions, errors).
+- PostgreSQL operational database queried via read replicas to avoid impacting production.
+- Third-party SaaS APIs: Stripe for revenue metrics, Intercom for support ticket volumes.
+
+Visualization
+Charts are built with Recharts for standard components and D3.js for custom visualizations.
+Dashboard layout is user-configurable with drag-and-drop widget placement and saved per user.
+
+Refresh Cadence
+- Streaming metrics: near real-time (< 5 s lag via Kafka consumer).
+- Aggregated reports: refreshed every 15 minutes by a scheduled Python job.

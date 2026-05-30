@@ -1,0 +1,16 @@
+Full Stack Developer — Role Guide (Task Management App)
+
+Responsibilities
+- Own end-to-end features from database schema through REST API to React UI.
+- Coordinate with product to clarify acceptance criteria before implementation begins.
+- Review PRs from both frontend and backend contributors.
+- Maintain the WebSocket integration that powers real-time task and board updates.
+- Write end-to-end tests for critical user flows using Playwright.
+
+Onboarding Checklist
+1. Set up both the server and client repos locally and verify they communicate correctly.
+2. Review the Kanban board architecture and WebSocket event model with Charlie Brown.
+3. Implement a small full-stack ticket (new API route + matching frontend component) in your first sprint.
+
+Expected Skills
+TypeScript, Node.js + Express, React, PostgreSQL + TypeORM, WebSocket

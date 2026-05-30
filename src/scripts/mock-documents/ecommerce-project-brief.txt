@@ -1,0 +1,17 @@
+E-Commerce Platform — Project Brief
+
+Purpose
+Build a full-stack e-commerce application that allows users to browse products, manage a cart,
+and complete purchases. The platform must support seller and buyer roles with separate dashboards.
+
+Goals
+- Launch a production-ready storefront by Q3 2026.
+- Support 10,000 concurrent users without performance degradation.
+- Integrate with Stripe for payments and SendGrid for transactional email.
+
+Tech Stack
+Frontend : React + TypeScript + Tailwind CSS
+Backend  : Node.js + Express + TypeORM
+Database : PostgreSQL (AWS RDS)
+Storage  : AWS S3 for product images and documents
+Infra    : Docker containers deployed on AWS ECS
