@@ -61,4 +61,20 @@ export class S3Service {
         });
         return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
     }
+
+    async getObjectBuffer(key: string): Promise<Buffer> {
+        const command = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: key,
+        });
+        const response = await s3.send(command);
+        if (!response.Body) {
+            throw new Error(`S3 object has no body: ${key}`);
+        }
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+            chunks.push(chunk);
+        }
+        return Buffer.concat(chunks);
+    }
 }

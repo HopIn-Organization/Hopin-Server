@@ -1,6 +1,7 @@
 import { DocumentRepository } from "./document.repository";
 import { S3Service } from "./s3.service";
-import { ProjectDocument } from "./document.entity";
+import { DocumentExtractionService } from "./document-extraction.service";
+import { ExtractionStatus, ProjectDocument } from "./document.entity";
 import crypto from "crypto";
 
 const MAX_FILES_PER_PROJECT = 10;
@@ -19,10 +20,15 @@ const ALLOWED_MIME_TYPES = [
 export class DocumentService {
     private documentRepository: DocumentRepository;
     private s3Service: S3Service;
+    private extractionService: DocumentExtractionService;
 
     constructor() {
         this.documentRepository = new DocumentRepository();
         this.s3Service = new S3Service();
+        this.extractionService = new DocumentExtractionService(
+            this.documentRepository,
+            this.s3Service,
+        );
     }
 
     async getDocumentsByProject(projectId: number): Promise<ProjectDocument[]> {
@@ -82,6 +88,8 @@ export class DocumentService {
                 jobId: jobId ?? null,
             });
 
+            void this.extractionService.extractAndStore(doc);
+
             uploaded.push(doc);
         }
 
@@ -115,5 +123,24 @@ export class DocumentService {
         }
 
         return this.s3Service.getSignedDownloadUrl(doc.s3Key);
+    }
+
+    async getExtractedTextsForJob(
+        projectId: number,
+        jobId: number,
+    ): Promise<{ texts: string[]; pendingCount: number; failedCount: number }> {
+        const docs = await this.documentRepository.findByJobId(projectId, jobId);
+        const texts = docs
+            .filter((doc) => doc.extractionStatus === ("done" as ExtractionStatus) && doc.extractedText !== null)
+            .map((doc) => doc.extractedText as string);
+        const pendingCount = docs.filter(
+            (doc) =>
+                doc.extractionStatus === ("pending" as ExtractionStatus) ||
+                doc.extractionStatus === ("processing" as ExtractionStatus),
+        ).length;
+        const failedCount = docs.filter(
+            (doc) => doc.extractionStatus === ("failed" as ExtractionStatus),
+        ).length;
+        return { texts, pendingCount, failedCount };
     }
 }
