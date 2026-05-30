@@ -44,6 +44,10 @@ export class DocumentRepository {
         return this.repository.save(doc);
     }
 
+    async update(id: number, data: Partial<ProjectDocument>): Promise<void> {
+        await this.repository.update(id, data);
+    }
+
     async delete(id: number): Promise<void> {
         await this.repository.delete(id);
     }

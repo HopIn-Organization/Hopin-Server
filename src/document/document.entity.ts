@@ -9,6 +9,8 @@ import {
 import { Project } from "../project/project.entity";
 import { Job } from "../job/job.entity";
 
+export type ExtractionStatus = "pending" | "processing" | "done" | "failed";
+
 @Entity({ name: "project_documents" })
 export class ProjectDocument {
     @PrimaryGeneratedColumn({ type: "integer", name: "id" })
@@ -39,6 +41,12 @@ export class ProjectDocument {
 
     @Column({ type: "integer", name: "job_id", nullable: true })
     jobId!: number | null;
+
+    @Column({ type: "text", name: "extracted_text", nullable: true })
+    extractedText!: string | null;
+
+    @Column({ type: "text", name: "extraction_status", default: "pending" })
+    extractionStatus!: ExtractionStatus;
 
     @CreateDateColumn({ name: "uploaded_at" })
     uploadedAt!: Date;
