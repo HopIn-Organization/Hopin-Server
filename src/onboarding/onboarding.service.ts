@@ -6,6 +6,7 @@ import { buildOnboardingPrompt } from '../prompts/onboarding.prompt';
 import { LLMService } from '../services/llm.service';
 import { Task } from '../task/task.entity';
 import { TaskService } from '../task/task.service';
+import type { LangfuseTrace } from '../utils/langfuse';
 import { OnBoarding } from './onBoarding.entity';
 import { OnboardingRepository } from './onBoarding.repository';
 
@@ -14,6 +15,7 @@ export interface GenerateOnboardingInput {
   jobId: number;
   documents?: string[];
   daysDuration: number;
+  trace?: LangfuseTrace;
 }
 
 export type OnboardingWithProgress = OnBoarding & { progress: number };
@@ -120,21 +122,30 @@ export class OnboardingService {
       });
 
       console.log(`[Onboarding] Sending prompt to LLM for onboarding id=${onboardingId}`);
-      const tasks = await this.llmService.generateOnboardingTasks(prompt);
-      console.log(`[Onboarding] LLM returned ${tasks.length} tasks for onboarding id=${onboardingId}`);
+      const tasks = await this.llmService.generateOnboardingTasks(prompt, {
+        trace: input.trace,
+        sessionId: `${input.userId}-${input.jobId}`,
+        userId: `${input.userId}`,
+      });
 
-      // Fetch the OnBoarding entity for the relation reference
+      console.log(`[Onboarding] LLM returned ${tasks?.length} tasks for onboarding id=${onboardingId}`);
+
       const onboardingEntity = { id: onboardingId } as OnBoarding;
 
       const savedParents = await this.taskService.createTasks(
-        tasks.map(task => ({ ...task, subtasks: undefined, onboarding: onboardingEntity }))
+        tasks?.map(task => ({ ...task, subtasks: undefined, onboarding: onboardingEntity }))
       );
 
-      const parentByOrder = new Map(savedParents.map((p) => [p.order, p]));
+      const parentByOrder = new Map(savedParents?.map((p) => [p.order, p]));
 
       const subtaskData: DeepPartial<Task>[] = tasks.flatMap((task) => {
+
+        if (!task.order) return [];
+
         const parent = parentByOrder.get(task.order);
+
         if (!parent) return [];
+
         return (task.subtasks ?? []).map((sub, j) => ({
           title: sub.title,
           description: sub.description,
@@ -146,7 +157,8 @@ export class OnboardingService {
         }));
       });
 
-      if (subtaskData.length > 0) {
+
+      if (subtaskData?.length > 0) {
         await this.taskService.createTasks(subtaskData);
       }
 

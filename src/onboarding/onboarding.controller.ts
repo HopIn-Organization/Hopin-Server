@@ -36,22 +36,49 @@ export class OnboardingController {
         return;
       }
 
-      if (typeof daysDuration !== 'number' || !Number.isInteger(daysDuration) || daysDuration < 1) {
-        res.status(400).json({ error: 'daysDuration must be a positive integer' });
+      if (
+        typeof daysDuration !== 'number' ||
+        !Number.isInteger(daysDuration) ||
+        daysDuration < 1
+      ) {
+        res.status(400).json({
+          error: 'daysDuration must be a positive integer',
+        });
         return;
       }
 
       if (documents !== undefined && !Array.isArray(documents)) {
-        res
-          .status(400)
-          .json({ error: 'documents must be an array of strings' });
+        res.status(400).json({
+          error: 'documents must be an array of strings',
+        });
         return;
       }
 
-      const onboardingId = await this.onboardingService.startGeneration({ userId, jobId, documents, daysDuration });
+      const trace = req.langfuseTrace;
 
-      this.onboardingService.runGeneration(onboardingId, { userId, jobId, documents, daysDuration })
-        .catch((err) => console.error(`[Onboarding] Unhandled error in runGeneration id=${onboardingId}:`, err));
+      const onboardingId =
+        await this.onboardingService.startGeneration({
+          userId,
+          jobId,
+          documents,
+          daysDuration,
+          trace,
+        });
+
+      this.onboardingService
+        .runGeneration(onboardingId, {
+          userId,
+          jobId,
+          documents,
+          daysDuration,
+          trace,
+        })
+        .catch((err) =>
+          console.error(
+            `[Onboarding] Unhandled error in runGeneration id=${onboardingId}:`,
+            err
+          )
+        );
 
       res.status(202).json({ onboardingId });
     } catch (error) {
@@ -59,18 +86,27 @@ export class OnboardingController {
     }
   };
 
-  getOnboardingStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getOnboardingStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const id = parseInt(req.params.id as string, 10);
+
       if (isNaN(id)) {
         res.status(400).json({ error: 'id must be a valid number' });
         return;
       }
-      const result = await this.onboardingService.getOnboardingStatus(id);
+
+      const result =
+        await this.onboardingService.getOnboardingStatus(id);
+
       if (!result) {
         res.status(404).json({ error: 'Onboarding not found' });
         return;
       }
+
       res.status(200).json(result);
     } catch (error) {
       next(error);
@@ -83,10 +119,12 @@ export class OnboardingController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const projectId = parseInt(req.params.projectId as string);
+      const projectId = parseInt(req.params.projectId as string, 10);
 
       if (isNaN(projectId)) {
-        res.status(400).json({ error: 'projectId must be a valid number' });
+        res.status(400).json({
+          error: 'projectId must be a valid number',
+        });
         return;
       }
 
@@ -105,15 +143,18 @@ export class OnboardingController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const userId = parseInt(req.params.userId as string);
-      const jobId = parseInt(req.params.jobId as string);
+      const userId = parseInt(req.params.userId as string, 10);
+      const jobId = parseInt(req.params.jobId as string, 10);
 
       if (isNaN(userId) || isNaN(jobId)) {
-        res.status(400).json({ error: 'userId and jobId must be valid numbers' });
+        res.status(400).json({
+          error: 'userId and jobId must be valid numbers',
+        });
         return;
       }
 
-      const onboarding = await this.onboardingService.getOnboarding(userId, jobId);
+      const onboarding =
+        await this.onboardingService.getOnboarding(userId, jobId);
 
       if (!onboarding) {
         res.status(404).json({ error: 'Onboarding not found' });
@@ -125,20 +166,24 @@ export class OnboardingController {
       next(error);
     }
   };
+
   getOnboardingById = async (
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const onboardingId = parseInt(req.params.id as string);
+      const onboardingId = parseInt(req.params.id as string, 10);
 
       if (isNaN(onboardingId)) {
-        res.status(400).json({ error: 'onboardingId must be a valid number' });
+        res.status(400).json({
+          error: 'onboardingId must be a valid number',
+        });
         return;
       }
 
-      const onboarding = await this.onboardingService.getOnBoardingById(onboardingId);
+      const onboarding =
+        await this.onboardingService.getOnBoardingById(onboardingId);
 
       if (!onboarding) {
         res.status(404).json({ error: 'Onboarding not found' });
@@ -148,6 +193,7 @@ export class OnboardingController {
       res.status(200).json(onboarding);
     } catch (error) {
       next(error);
+      return;
     }
   };
 }

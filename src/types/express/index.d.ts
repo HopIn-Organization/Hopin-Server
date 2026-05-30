@@ -1,4 +1,5 @@
 import 'express';
+import type { LangfuseTrace } from '../../utils/langfuse';
 
 declare global {
   namespace Express {
@@ -7,6 +8,7 @@ declare global {
         id: number;
         email?: string;
       };
+      langfuseTrace?: LangfuseTrace;
     }
   }
 }
