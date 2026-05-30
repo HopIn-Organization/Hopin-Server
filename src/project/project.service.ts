@@ -6,6 +6,8 @@ import { SkillRepository } from "../skill/skill.repository";
 import { Skill } from "../skill/skill.entity";
 import { ProjectMemberRepository } from "../projectMember/projectMember.repository";
 import { ProjectMember, ProjectRole } from "../projectMember/projectMember.entity";
+import { DocumentRepository } from "../document/document.repository";
+import { S3Service } from "../document/s3.service";
 
 interface UpsertProjectPayload {
   name: string;
@@ -25,12 +27,16 @@ export class ProjectService {
   private jobRepository: JobRepository;
   private skillRepository: SkillRepository;
   private projectMemberRepository: ProjectMemberRepository;
+  private documentRepository: DocumentRepository;
+  private s3Service: S3Service;
 
   constructor() {
     this.projectRepository = new ProjectRepository();
     this.jobRepository = new JobRepository();
     this.skillRepository = new SkillRepository();
     this.projectMemberRepository = new ProjectMemberRepository();
+    this.documentRepository = new DocumentRepository();
+    this.s3Service = new S3Service();
   }
 
   async getAllProjects(): Promise<Project[]> {
@@ -144,6 +150,23 @@ export class ProjectService {
     if (!completeProject) throw new Error('Failed to retrieve project');
 
     return completeProject;
+  }
+
+  async deleteProject(id: number): Promise<void> {
+    const project = await this.projectRepository.findById(id);
+    if (!project) throw new Error('Project not found');
+
+    // Delete S3 documents first
+    const documents = await this.documentRepository.findAllByProjectId(id);
+    for (const doc of documents) {
+      await this.s3Service.delete(doc.s3Key);
+    }
+
+    // Delete project members (no DB cascade)
+    await this.projectMemberRepository.deleteByProjectId(id);
+
+    // Delete project (DB cascade handles project_documents records)
+    await this.projectRepository.delete(id);
   }
 
   // convenience aliases
