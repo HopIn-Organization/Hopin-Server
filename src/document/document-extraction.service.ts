@@ -3,6 +3,9 @@ import mammoth from "mammoth";
 import { ExtractionStatus, ProjectDocument } from "./document.entity";
 import { DocumentRepository } from "./document.repository";
 import { S3Service } from "./s3.service";
+import { DocumentChunkingService } from "./document-chunking.service";
+import { DocumentEmbeddingService } from "./document-embedding.service";
+import { DocumentChunkRepository } from "./document-chunk.repository";
 
 const TEXT_MIME_TYPES = new Set([
     "text/plain",
@@ -28,10 +31,16 @@ function normalizeText(raw: string): string {
 export class DocumentExtractionService {
     private documentRepository: DocumentRepository;
     private s3Service: S3Service;
+    private chunkingService: DocumentChunkingService;
+    private embeddingService: DocumentEmbeddingService;
+    private documentChunkRepository: DocumentChunkRepository;
 
     constructor(documentRepository: DocumentRepository, s3Service: S3Service) {
         this.documentRepository = documentRepository;
         this.s3Service = s3Service;
+        this.chunkingService = new DocumentChunkingService();
+        this.embeddingService = new DocumentEmbeddingService();
+        this.documentChunkRepository = new DocumentChunkRepository();
     }
 
     private async extractText(doc: ProjectDocument): Promise<string> {
@@ -56,6 +65,45 @@ export class DocumentExtractionService {
         throw new Error(`Unsupported MIME type: ${mime}`);
     }
 
+    private async chunkAndEmbed(doc: ProjectDocument, extractedText: string): Promise<void> {
+        try {
+            await this.documentChunkRepository.deleteByDocumentId(doc.id);
+
+            const chunks = this.chunkingService.chunkText(
+                extractedText,
+                doc.id,
+                doc.projectId,
+                doc.jobId,
+                doc.originalName,
+            );
+
+            if (chunks.length === 0) {
+                console.log(
+                    `[DocumentExtractionService] No chunks produced for document ${doc.id} — skipping embedding.`,
+                );
+                return;
+            }
+
+            const embeddings = await this.embeddingService.embedBatch(chunks.map((c) => c.text));
+
+            const chunksWithEmbeddings = chunks.map((chunk, i) => ({
+                ...chunk,
+                embedding: embeddings[i],
+            }));
+
+            await this.documentChunkRepository.insertBatch(chunksWithEmbeddings);
+
+            console.log(
+                `[DocumentExtractionService] Stored ${chunks.length} chunks for document ${doc.id}.`,
+            );
+        } catch (err) {
+            console.error(
+                `[DocumentExtractionService] Failed to chunk/embed document ${doc.id}:`,
+                err,
+            );
+        }
+    }
+
     async extractAndStore(doc: ProjectDocument): Promise<void> {
         try {
             await this.documentRepository.update(doc.id, {
@@ -68,6 +116,8 @@ export class DocumentExtractionService {
                 extractedText: text,
                 extractionStatus: "done" as ExtractionStatus,
             });
+
+            void this.chunkAndEmbed(doc, text);
         } catch (err) {
             console.error(
                 `[DocumentExtractionService] Failed to extract text for document ${doc.id}:`,

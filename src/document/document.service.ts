@@ -2,6 +2,8 @@ import { DocumentRepository } from "./document.repository";
 import { S3Service } from "./s3.service";
 import { DocumentExtractionService } from "./document-extraction.service";
 import { ExtractionStatus, ProjectDocument } from "./document.entity";
+import { DocumentChunk } from "./document-chunk.entity";
+import { DocumentChunkRepository } from "./document-chunk.repository";
 import crypto from "crypto";
 
 const MAX_FILES_PER_PROJECT = 10;
@@ -17,10 +19,22 @@ const ALLOWED_MIME_TYPES = [
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
+function cosineSimilarity(a: number[], b: number[]): number {
+    if (a.length !== b.length || a.length === 0) return 0;
+    let dot = 0, normA = 0, normB = 0;
+    for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
+    return normA === 0 || normB === 0 ? 0 : dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
 export class DocumentService {
     private documentRepository: DocumentRepository;
     private s3Service: S3Service;
     private extractionService: DocumentExtractionService;
+    private documentChunkRepository: DocumentChunkRepository;
 
     constructor() {
         this.documentRepository = new DocumentRepository();
@@ -29,6 +43,7 @@ export class DocumentService {
             this.documentRepository,
             this.s3Service,
         );
+        this.documentChunkRepository = new DocumentChunkRepository();
     }
 
     async getDocumentsByProject(projectId: number): Promise<ProjectDocument[]> {
@@ -142,5 +157,23 @@ export class DocumentService {
             (doc) => doc.extractionStatus === ("failed" as ExtractionStatus),
         ).length;
         return { texts, pendingCount, failedCount };
+    }
+
+    async getRelevantChunksForJob(
+        projectId: number,
+        jobId: number,
+        queryEmbedding: number[],
+        topK: number = 5,
+    ): Promise<DocumentChunk[]> {
+        const chunks = await this.documentChunkRepository.findByJobId(projectId, jobId);
+
+        const scored = chunks.map((chunk) => ({
+            chunk,
+            score: cosineSimilarity(queryEmbedding, chunk.embedding),
+        }));
+
+        scored.sort((a, b) => b.score - a.score);
+
+        return scored.slice(0, topK).map((s) => s.chunk);
     }
 }

@@ -10,6 +10,7 @@ import { Skill } from '../skill/skill.entity';
 import { OnBoarding } from '../onboarding/onBoarding.entity';
 import { Task } from '../task/task.entity';
 import { ProjectDocument } from '../document/document.entity';
+import { DocumentChunk } from '../document/document-chunk.entity';
 
 dotenv.config();
 
@@ -22,7 +23,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME,
   synchronize: process.env.DB_SYNCHRONIZE === 'true',
   logging: process.env.DB_LOGGING === 'true',
-  entities: [User, Job, Project, ProjectMember, Skill, OnBoarding, Task, ProjectDocument],
+  entities: [User, Job, Project, ProjectMember, Skill, OnBoarding, Task, ProjectDocument, DocumentChunk],
   migrations: [path.join(__dirname, 'migrations', '*.{ts,js}')],
   subscribers: [path.join(__dirname, 'subscribers', '*.{ts,js}')],
 });
