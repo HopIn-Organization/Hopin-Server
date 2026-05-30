@@ -10,7 +10,8 @@ export class ProjectController {
 
   getAllProjects = async (req: Request, res: Response): Promise<void> => {
     try {
-      const projects = await this.projectService.getAllProjects();
+      const userId = req.user!.id;
+      const projects = await this.projectService.getProjectsByUser(userId);
       res.json(projects);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching projects' });

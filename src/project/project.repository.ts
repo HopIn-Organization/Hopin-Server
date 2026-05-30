@@ -16,6 +16,24 @@ export class ProjectRepository {
     });
   }
 
+  async findByUserId(userId: number): Promise<Project[]> {
+    const projectIds = await this.repository
+      .createQueryBuilder("project")
+      .innerJoin("project.members", "member")
+      .innerJoin("member.user", "user")
+      .where("user.id = :userId", { userId })
+      .select("project.id")
+      .getMany();
+
+    if (projectIds.length === 0) return [];
+
+    return this.repository.find({
+      where: projectIds.map((p) => ({ id: p.id })),
+      relations: { jobs: { skills: true }, members: { user: true, job: true } },
+      order: { id: "DESC" },
+    });
+  }
+
   async findById(id: number): Promise<Project | null> {
     return this.repository.findOne({
       where: { id },
