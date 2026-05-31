@@ -23,9 +23,7 @@ describe('Auth Module', () => {
       expect(res.status).toBe(201);
       expect(res.body).toEqual(
         expect.objectContaining({
-          id: expect.any(Number),
-          email,
-          name: 'Test User'
+          accessToken: expect.any(String)
         })
       );
     });

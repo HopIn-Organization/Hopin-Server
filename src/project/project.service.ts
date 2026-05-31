@@ -7,7 +7,9 @@ import { Skill } from "../skill/skill.entity";
 import { ProjectMemberRepository } from "../projectMember/projectMember.repository";
 import { ProjectMember, ProjectRole } from "../projectMember/projectMember.entity";
 import { DocumentRepository } from "../document/document.repository";
+import { DocumentChunkRepository } from "../document/document-chunk.repository";
 import { S3Service } from "../document/s3.service";
+import { PineconeService } from "../document/pinecone.service";
 
 interface UpsertProjectPayload {
   name: string;
@@ -28,7 +30,9 @@ export class ProjectService {
   private skillRepository: SkillRepository;
   private projectMemberRepository: ProjectMemberRepository;
   private documentRepository: DocumentRepository;
+  private documentChunkRepository: DocumentChunkRepository;
   private s3Service: S3Service;
+  private pineconeService: PineconeService;
 
   constructor() {
     this.projectRepository = new ProjectRepository();
@@ -36,7 +40,9 @@ export class ProjectService {
     this.skillRepository = new SkillRepository();
     this.projectMemberRepository = new ProjectMemberRepository();
     this.documentRepository = new DocumentRepository();
+    this.documentChunkRepository = new DocumentChunkRepository();
     this.s3Service = new S3Service();
+    this.pineconeService = new PineconeService();
   }
 
   async getAllProjects(): Promise<Project[]> {
@@ -156,10 +162,16 @@ export class ProjectService {
     const project = await this.projectRepository.findById(id);
     if (!project) throw new Error('Project not found');
 
-    // Delete S3 documents first
+    // Delete S3 documents and Pinecone vectors first
     const documents = await this.documentRepository.findAllByProjectId(id);
     for (const doc of documents) {
       await this.s3Service.delete(doc.s3Key);
+
+      const chunks = await this.documentChunkRepository.findByDocumentId(doc.id);
+      if (chunks.length > 0) {
+        const vectorIds = chunks.map((c) => `chunk-${c.documentId}-${c.chunkIndex}`);
+        await this.pineconeService.deleteChunksByDocumentId(vectorIds, id);
+      }
     }
 
     // Delete project members (no DB cascade)

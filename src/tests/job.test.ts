@@ -4,6 +4,7 @@ import { initializeDatabase, AppDataSource } from '../database';
 
 describe('Job Module', () => {
   let authToken: string;
+  let projectId: number;
   const email = `jobuser_${Date.now()}@example.com`;
   const password = 'SecurePassword123!';
 
@@ -21,6 +22,26 @@ describe('Job Module', () => {
     expect(loginRes.body).toHaveProperty('accessToken');
 
     authToken = loginRes.body.accessToken;
+
+    // Get the logged-in user's ID so we can add them as project admin
+    const profileRes = await request(app)
+      .get('/profile/me')
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(profileRes.status).toBe(200);
+    const userId = parseInt(profileRes.body.id);
+
+    // Create a project with the user as admin and a seed job to satisfy member resolution
+    const seedJobTitle = `Seed Job ${Date.now()}`;
+    const projectRes = await request(app)
+      .post('/projects')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        name: `Job Test Project ${Date.now()}`,
+        jobs: [{ title: seedJobTitle }],
+        members: [{ userId, role: 'admin' }]
+      });
+    expect(projectRes.status).toBe(201);
+    projectId = projectRes.body.id;
   });
 
   afterAll(async () => {
@@ -45,7 +66,7 @@ describe('Job Module', () => {
   });
 
   test('POST /jobs should create a job', async () => {
-    const payload = { title: `Test Job ${Date.now()}`, project: null };
+    const payload = { title: `Test Job ${Date.now()}`, projectId };
     const res = await request(app)
       .post('/jobs')
       .set('Authorization', `Bearer ${authToken}`)
@@ -59,7 +80,7 @@ describe('Job Module', () => {
     const res = await request(app)
       .post('/jobs')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({});
+      .send({ projectId });
 
     expect(res.status).toBe(400);
   });
@@ -68,7 +89,7 @@ describe('Job Module', () => {
     const createResp = await request(app)
       .post('/jobs')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ title: `Skill Add Job ${Date.now()}`, project: null });
+      .send({ title: `Skill Add Job ${Date.now()}`, projectId });
 
     expect(createResp.status).toBe(201);
     const jobId = createResp.body.id;
@@ -79,7 +100,7 @@ describe('Job Module', () => {
     const skillResp = await request(app)
       .post(`/jobs/${jobId}/skills`)
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ skills: [s1, s2] });
+      .send({ skills: [s1, s2], projectId });
 
     expect([200, 201]).toContain(skillResp.status);
     expect(skillResp.body).toHaveProperty('skills');
@@ -90,7 +111,7 @@ describe('Job Module', () => {
     const createResp = await request(app)
       .post('/jobs')
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ title: `Skill Add Job 2 ${Date.now()}`, project: null });
+      .send({ title: `Skill Add Job 2 ${Date.now()}`, projectId });
 
     expect(createResp.status).toBe(201);
     const jobId = createResp.body.id;
@@ -98,7 +119,7 @@ describe('Job Module', () => {
     const skillResp = await request(app)
       .post(`/jobs/${jobId}/skills`)
       .set('Authorization', `Bearer ${authToken}`)
-      .send({ skills: 'not-array' });
+      .send({ skills: 'not-array', projectId });
 
     expect(skillResp.status).toBe(400);
   });
