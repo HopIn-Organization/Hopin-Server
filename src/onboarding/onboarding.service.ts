@@ -133,6 +133,7 @@ export class OnboardingService {
         }
       } catch (err) {
         console.warn('[Onboarding] RAG retrieval failed, using provided documents:', err);
+        ragDocuments = input.documents ?? [];
       }
 
       const prompt = buildOnboardingPrompt({
