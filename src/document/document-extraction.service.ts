@@ -6,6 +6,7 @@ import { S3Service } from "./s3.service";
 import { DocumentChunkingService } from "./document-chunking.service";
 import { DocumentEmbeddingService } from "./document-embedding.service";
 import { DocumentChunkRepository } from "./document-chunk.repository";
+import { PineconeService } from "./pinecone.service";
 
 const TEXT_MIME_TYPES = new Set([
     "text/plain",
@@ -34,6 +35,7 @@ export class DocumentExtractionService {
     private chunkingService: DocumentChunkingService;
     private embeddingService: DocumentEmbeddingService;
     private documentChunkRepository: DocumentChunkRepository;
+    private pineconeService: PineconeService;
 
     constructor(documentRepository: DocumentRepository, s3Service: S3Service) {
         this.documentRepository = documentRepository;
@@ -41,6 +43,7 @@ export class DocumentExtractionService {
         this.chunkingService = new DocumentChunkingService();
         this.embeddingService = new DocumentEmbeddingService();
         this.documentChunkRepository = new DocumentChunkRepository();
+        this.pineconeService = new PineconeService();
     }
 
     private async extractText(doc: ProjectDocument): Promise<string> {
@@ -67,6 +70,12 @@ export class DocumentExtractionService {
 
     private async chunkAndEmbed(doc: ProjectDocument, extractedText: string): Promise<void> {
         try {
+            const stillExists = await this.documentRepository.findById(doc.id);
+            if (!stillExists) {
+                console.log(`[DocumentExtractionService] Document ${doc.id} was deleted — aborting chunk/embed.`);
+                return;
+            }
+
             await this.documentChunkRepository.deleteByDocumentId(doc.id);
 
             const chunks = this.chunkingService.chunkText(
@@ -92,6 +101,7 @@ export class DocumentExtractionService {
             }));
 
             await this.documentChunkRepository.insertBatch(chunksWithEmbeddings);
+            await this.pineconeService.upsertChunks(chunksWithEmbeddings, doc.projectId);
 
             console.log(
                 `[DocumentExtractionService] Stored ${chunks.length} chunks for document ${doc.id}.`,

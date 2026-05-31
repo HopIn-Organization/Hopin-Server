@@ -9,6 +9,8 @@ import { TaskService } from '../task/task.service';
 import type { LangfuseTrace } from '../utils/langfuse';
 import { OnBoarding } from './onBoarding.entity';
 import { OnboardingRepository } from './onBoarding.repository';
+import { DocumentService } from '../document/document.service';
+import { DocumentEmbeddingService } from '../document/document-embedding.service';
 
 export interface GenerateOnboardingInput {
   userId: number;
@@ -91,7 +93,7 @@ export class OnboardingService {
   }
 
   async runGeneration(onboardingId: number, input: GenerateOnboardingInput): Promise<void> {
-    const { userId, jobId, documents = [], daysDuration } = input;
+    const { userId, jobId, daysDuration } = input;
 
     try {
       await this.onboardingRepository.updateStatus(onboardingId, 'generating');
@@ -108,16 +110,41 @@ export class OnboardingService {
       if (!job) throw new Error(`Job with id ${jobId} not found`);
       if (!job.project) throw new Error(`Job with id ${jobId} is not associated with any project`);
 
+      // Auto-fetch relevant document chunks from Pinecone/Postgres
+      let ragDocuments: string[] = input.documents ?? [];
+
+      const documentService = new DocumentService();
+      const embeddingService = new DocumentEmbeddingService();
+
+      // Build a semantic query from job context
+      const queryText = [job.title, ...job.skills.map((s) => s.name)].join(', ');
+      try {
+        const [queryEmbedding] = await embeddingService.embedBatch([queryText]);
+        if (queryEmbedding && queryEmbedding.length > 0) {
+          const chunks = await documentService.getRelevantChunksForJob(
+            job.project.id,
+            job.id,
+            queryEmbedding,
+            5,
+          );
+          if (chunks.length > 0) {
+            ragDocuments = [...chunks.map((c) => c.text), ...(input.documents ?? [])];
+          }
+        }
+      } catch (err) {
+        console.warn('[Onboarding] RAG retrieval failed, using provided documents:', err);
+      }
+
       const prompt = buildOnboardingPrompt({
         onboardingId,
         userName: user.name,
         userExperienceYears: user.experienceYears,
-        userSkills: user.skills.map(s => s.name),
+        userSkills: user.skills.map((s) => s.name),
         jobTitle: job.title,
-        jobRequiredSkills: job.skills.map(s => s.name),
+        jobRequiredSkills: job.skills.map((s) => s.name),
         projectName: job.project.name,
         projectDescription: job.project.description,
-        documents,
+        documents: ragDocuments,
         daysDuration,
       });
 

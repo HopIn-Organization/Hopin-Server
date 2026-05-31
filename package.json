@@ -41,6 +41,7 @@
     "@langfuse/otel": "^4.6.1",
     "@langfuse/tracing": "^4.6.1",
     "@opentelemetry/sdk-node": "^0.218.0",
+    "@pinecone-database/pinecone": "^7.2.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
