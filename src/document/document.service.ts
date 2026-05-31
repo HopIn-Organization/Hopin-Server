@@ -2,8 +2,8 @@ import { DocumentRepository } from "./document.repository";
 import { S3Service } from "./s3.service";
 import { DocumentExtractionService } from "./document-extraction.service";
 import { ExtractionStatus, ProjectDocument } from "./document.entity";
-import { DocumentChunk } from "./document-chunk.entity";
 import { DocumentChunkRepository } from "./document-chunk.repository";
+import { PineconeService } from "./pinecone.service";
 import crypto from "crypto";
 
 const MAX_FILES_PER_PROJECT = 10;
@@ -35,6 +35,7 @@ export class DocumentService {
     private s3Service: S3Service;
     private extractionService: DocumentExtractionService;
     private documentChunkRepository: DocumentChunkRepository;
+    private pineconeService: PineconeService;
 
     constructor() {
         this.documentRepository = new DocumentRepository();
@@ -44,6 +45,7 @@ export class DocumentService {
             this.s3Service,
         );
         this.documentChunkRepository = new DocumentChunkRepository();
+        this.pineconeService = new PineconeService();
     }
 
     async getDocumentsByProject(projectId: number): Promise<ProjectDocument[]> {
@@ -122,6 +124,10 @@ export class DocumentService {
             throw new Error("Document does not belong to this project");
         }
 
+        const chunks = await this.documentChunkRepository.findByDocumentId(documentId);
+        const vectorIds = chunks.map((c) => `chunk-${c.documentId}-${c.chunkIndex}`);
+        await this.pineconeService.deleteChunksByDocumentId(vectorIds, doc.projectId);
+
         await this.s3Service.delete(doc.s3Key);
         await this.documentRepository.delete(documentId);
     }
@@ -164,16 +170,27 @@ export class DocumentService {
         jobId: number,
         queryEmbedding: number[],
         topK: number = 5,
-    ): Promise<DocumentChunk[]> {
-        const chunks = await this.documentChunkRepository.findByJobId(projectId, jobId);
+    ): Promise<{ text: string; score: number; sourceFileName: string }[]> {
+        // Try Pinecone first
+        if (!this.pineconeService.isDisabled()) {
+            const results = await this.pineconeService.queryChunks(queryEmbedding, projectId, jobId, topK);
+            if (results.length > 0) {
+                return results.map((r) => ({ text: r.text, score: r.score, sourceFileName: r.sourceFileName }));
+            }
+            console.warn('[Pinecone] No results returned — falling back to Postgres cosine similarity');
+        }
 
-        const scored = chunks.map((chunk) => ({
-            chunk,
-            score: cosineSimilarity(queryEmbedding, chunk.embedding),
-        }));
+        // Fallback: Postgres cosine similarity
+        const allChunks = await this.documentChunkRepository.findByJobId(projectId, jobId);
+        if (allChunks.length === 0) return [];
 
-        scored.sort((a, b) => b.score - a.score);
-
-        return scored.slice(0, topK).map((s) => s.chunk);
+        return allChunks
+            .map((chunk) => ({
+                text: chunk.text,
+                score: cosineSimilarity(queryEmbedding, chunk.embedding),
+                sourceFileName: chunk.sourceFileName,
+            }))
+            .sort((a, b) => b.score - a.score)
+            .slice(0, topK);
     }
 }

@@ -13,6 +13,13 @@ export class DocumentChunkRepository {
     await this.repository.delete({ documentId });
   }
 
+  async findByDocumentId(documentId: number): Promise<DocumentChunk[]> {
+    return this.repository.find({
+      where: { documentId },
+      order: { chunkIndex: 'ASC' },
+    });
+  }
+
   async insertBatch(chunks: DeepPartial<DocumentChunk>[]): Promise<void> {
     await this.repository.save(chunks);
   }
