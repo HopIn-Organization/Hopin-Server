@@ -39,7 +39,10 @@ export class TaskRepository {
 
   async completeTask(taskId: number): Promise<Task | null> {
     await this.taskRepository.update(taskId, { isCompleted: true });
-    return this.taskRepository.findOne({ where: { id: taskId }, relations: { subtasks: true } });
+    return this.taskRepository.findOne({
+      where: { id: taskId },
+      relations: { subtasks: true },
+    });
   }
 
   async deleteTask(taskId: number): Promise<boolean> {
@@ -47,14 +50,42 @@ export class TaskRepository {
     return (result.affected ?? 0) > 0;
   }
 
+  async deleteByProjectId(projectId: number): Promise<void> {
+    // Delete subtasks first (tasks with parent_id), then root tasks.
+    // task.parent_id and task.onboarding_id both have NO ACTION, so children
+    // must be removed before parents, and all tasks must be removed before
+    // their onboarding rows are cascade-deleted when the project row is deleted.
+    await AppDataSource.transaction(async manager => {
+      // Step 1: delete subtasks (children) whose parent belongs to this project's onboardings
+      await manager.query(
+        `DELETE FROM task WHERE parent_id IN (
+          SELECT t.id FROM task t
+          JOIN onboarding o ON t.onboarding_id = o.id
+          WHERE o.project_id = $1
+        )`,
+        [projectId]
+      );
+
+      // Step 2: delete root tasks for this project's onboardings
+      await manager.query(
+        `DELETE FROM task WHERE onboarding_id IN (
+          SELECT id FROM onboarding WHERE project_id = $1
+        )`,
+        [projectId]
+      );
+    });
+  }
+
   async upsertTask(data: UpsertTaskInput): Promise<Task | null> {
-    return AppDataSource.transaction(async (manager) => {
+    return AppDataSource.transaction(async manager => {
       const { id, onboardingId, parentId, subtasks, ...rest } = data;
       const taskRepo = manager.getRepository(Task);
 
       const entityData: DeepPartial<Task> = { ...rest };
-      if (onboardingId !== undefined) entityData.onboarding = { id: onboardingId };
-      if (parentId !== undefined) entityData.parent = parentId != null ? { id: parentId } : undefined;
+      if (onboardingId !== undefined)
+        entityData.onboarding = { id: onboardingId };
+      if (parentId !== undefined)
+        entityData.parent = parentId != null ? { id: parentId } : undefined;
 
       let taskId: number;
       if (id !== undefined) {
@@ -68,9 +99,14 @@ export class TaskRepository {
       }
 
       if (subtasks !== undefined) {
-        const existing = await taskRepo.find({ where: { parent: { id: taskId } }, select: ['id'] });
+        const existing = await taskRepo.find({
+          where: { parent: { id: taskId } },
+          select: ['id'],
+        });
         const existingIds = existing.map(s => s.id);
-        const incomingIds = new Set(subtasks.filter(s => s.id !== undefined).map(s => s.id!));
+        const incomingIds = new Set(
+          subtasks.filter(s => s.id !== undefined).map(s => s.id!)
+        );
 
         const toDelete = existingIds.filter(sid => !incomingIds.has(sid));
         if (toDelete.length > 0) {
@@ -87,7 +123,10 @@ export class TaskRepository {
         }
       }
 
-      return taskRepo.findOne({ where: { id: taskId }, relations: { subtasks: true } });
+      return taskRepo.findOne({
+        where: { id: taskId },
+        relations: { subtasks: true },
+      });
     });
   }
 }

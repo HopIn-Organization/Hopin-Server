@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { OnBoarding } from '../onboarding/onBoarding.entity';
 
 @Entity({ name: 'task' })
@@ -9,7 +16,7 @@ export class Task {
   @Column({ type: 'int', name: 'order' })
   order!: number;
 
-  @ManyToOne(() => OnBoarding, (onboarding) => onboarding.tasks)
+  @ManyToOne(() => OnBoarding, onboarding => onboarding.tasks)
   @JoinColumn({ name: 'onboarding_id' })
   onboarding?: OnBoarding;
 
@@ -25,13 +32,19 @@ export class Task {
   @Column({ type: 'boolean', name: 'is_completed', default: false })
   isCompleted!: boolean;
 
-  @Column({ type: 'text', array: true, name: 'links', nullable: true, default: '{}' })
+  @Column({
+    type: 'text',
+    array: true,
+    name: 'links',
+    nullable: true,
+    default: '{}',
+  })
   links!: string[];
 
-  @ManyToOne(() => Task, (task) => task.subtasks, { nullable: true })
+  @ManyToOne(() => Task, task => task.subtasks, { nullable: true })
   @JoinColumn({ name: 'parent_id' })
   parent?: Task;
 
-  @OneToMany(() => Task, (task) => task.parent)
+  @OneToMany(() => Task, task => task.parent)
   subtasks!: Task[];
 }

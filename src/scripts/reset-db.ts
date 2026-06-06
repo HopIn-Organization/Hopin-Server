@@ -22,7 +22,16 @@ const ResetDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   synchronize: false,
-  entities: [User, Job, Project, ProjectMember, Skill, OnBoarding, Task, ProjectDocument],
+  entities: [
+    User,
+    Job,
+    Project,
+    ProjectMember,
+    Skill,
+    OnBoarding,
+    Task,
+    ProjectDocument,
+  ],
   migrations: [path.join(__dirname, '../database/migrations/*.{ts,js}')],
 });
 
@@ -44,7 +53,7 @@ async function resetDb() {
   await ResetDataSource.destroy();
 }
 
-resetDb().catch((err) => {
+resetDb().catch(err => {
   console.error(err);
   process.exit(1);
 });

@@ -42,7 +42,10 @@ export class JobController {
         res.status(400).json({ message: 'projectId is required' });
         return;
       }
-      const job = await this.jobService.createJob({ ...jobData, project: { id: projectId } });
+      const job = await this.jobService.createJob({
+        ...jobData,
+        project: { id: projectId },
+      });
       res.status(201).json(job);
     } catch (error) {
       res.status(500).json({ message: 'Error creating job' });
@@ -59,8 +62,10 @@ export class JobController {
         return;
       }
 
-      if (!Array.isArray(skills) || !skills.every((s) => typeof s === 'string')) {
-        res.status(400).json({ message: 'Skills should be an array of strings' });
+      if (!Array.isArray(skills) || !skills.every(s => typeof s === 'string')) {
+        res
+          .status(400)
+          .json({ message: 'Skills should be an array of strings' });
         return;
       }
 

@@ -41,7 +41,11 @@ export const langfuseSdk: NodeSDK | undefined = langfuseSpanProcessor
     })
   : undefined;
 
-langfuseSdk?.start();
+try {
+  langfuseSdk?.start();
+} catch (_err) {
+  console.warn('[Langfuse] SDK start failed (non-fatal)');
+}
 
 export type LangfuseTrace = LangfuseSpan;
 
@@ -91,18 +95,28 @@ const getParentSpanContext = async (
     return undefined;
   }
   return {
-    traceId: isTraceId(traceId) ? traceId.toLowerCase() : await createTraceId(traceId),
+    traceId: isTraceId(traceId)
+      ? traceId.toLowerCase()
+      : await createTraceId(traceId),
     spanId: randomBytes(8).toString('hex'),
     traceFlags: TraceFlags.SAMPLED,
   };
 };
 
 export const flushLangfuse = async (): Promise<void> => {
-  await langfuseSpanProcessor?.forceFlush();
+  try {
+    await langfuseSpanProcessor?.forceFlush();
+  } catch (_err) {
+    console.warn('[Langfuse] Flush failed (non-fatal)');
+  }
 };
 
 export const shutdownLangfuse = async (): Promise<void> => {
-  await langfuseSdk?.shutdown();
+  try {
+    await langfuseSdk?.shutdown();
+  } catch (_err) {
+    console.warn('[Langfuse] Shutdown failed (non-fatal)');
+  }
 };
 
 export const reportLLMTrace = async (options: {
@@ -131,14 +145,10 @@ export const reportLLMTrace = async (options: {
         generationAttributes,
         { asType: 'generation' }
       )
-    : startObservation(
-        `LLM call (${options.model})`,
-        generationAttributes,
-        {
-          asType: 'generation',
-          parentSpanContext: await getParentSpanContext(options.traceId),
-        }
-      );
+    : startObservation(`LLM call (${options.model})`, generationAttributes, {
+        asType: 'generation',
+        parentSpanContext: await getParentSpanContext(options.traceId),
+      });
 
   generation.updateTrace({
     name: `LLM call (${options.model})`,

@@ -21,13 +21,21 @@ export class AuthController {
 
       const normalizedEmail = String(email).toLowerCase();
       const defaultName = name || normalizedEmail.split('@')[0];
-      await this.authService.register(defaultName, normalizedEmail, String(password));
+      await this.authService.register(
+        defaultName,
+        normalizedEmail,
+        String(password)
+      );
 
-      const tokens = await this.authService.login(normalizedEmail, String(password));
+      const tokens = await this.authService.login(
+        normalizedEmail,
+        String(password)
+      );
       this.setRefreshCookie(res, tokens.refreshToken);
       res.status(201).json({ accessToken: tokens.accessToken });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Registration failed';
+      const message =
+        error instanceof Error ? error.message : 'Registration failed';
       res.status(400).json({ message });
     }
   };
@@ -41,7 +49,10 @@ export class AuthController {
         return;
       }
 
-      const tokens = await this.authService.login(String(email).toLowerCase(), String(password));
+      const tokens = await this.authService.login(
+        String(email).toLowerCase(),
+        String(password)
+      );
       this.setRefreshCookie(res, tokens.refreshToken);
       res.json({ accessToken: tokens.accessToken });
     } catch (_error) {
@@ -51,7 +62,8 @@ export class AuthController {
 
   refresh = async (req: Request, res: Response): Promise<void> => {
     try {
-      const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
+      const refreshToken =
+        req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
 
       if (!refreshToken || typeof refreshToken !== 'string') {
         res.status(401).json({ message: 'Refresh token is required' });
@@ -82,7 +94,8 @@ export class AuthController {
       this.setRefreshCookie(res, result.refreshToken);
       res.json({ accessToken: result.accessToken, user: result.user });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Google authentication failed';
+      const message =
+        error instanceof Error ? error.message : 'Google authentication failed';
       const status = message.includes('already exists') ? 409 : 401;
       res.status(status).json({ message });
     }

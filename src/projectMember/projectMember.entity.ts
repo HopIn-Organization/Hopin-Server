@@ -1,38 +1,43 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, RelationId } from "typeorm";
-import { User } from "../database/entities/user.entity";
-import { Project } from "../project/project.entity";
-import { Job } from "../job/job.entity";
-
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  RelationId,
+} from 'typeorm';
+import { User } from '../database/entities/user.entity';
+import { Project } from '../project/project.entity';
+import { Job } from '../job/job.entity';
 
 export enum ProjectRole {
-    TRAINEE = "trainee",
-    ADMIN = "admin",
+  TRAINEE = 'trainee',
+  ADMIN = 'admin',
 }
 
-@Entity({ name: "project_members" })
+@Entity({ name: 'project_members' })
 export class ProjectMember {
-    @PrimaryGeneratedColumn()
-    id!: number;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-    @ManyToOne(() => User, (user) => user.projectMemberships)
-    user!: User;
+  @ManyToOne(() => User, user => user.projectMemberships)
+  user!: User;
 
-    @ManyToOne(() => Project, (project) => project.members)
-    project!: Project;
+  @ManyToOne(() => Project, project => project.members)
+  project!: Project;
 
-    @RelationId((member: ProjectMember) => member.project)
-    projectId!: number;
+  @RelationId((member: ProjectMember) => member.project)
+  projectId!: number;
 
-    @Column({
-        type: "enum",
-        enum: ProjectRole,
-        default: ProjectRole.TRAINEE,
-    })
-    role!: ProjectRole;
+  @Column({
+    type: 'enum',
+    enum: ProjectRole,
+    default: ProjectRole.TRAINEE,
+  })
+  role!: ProjectRole;
 
-    @ManyToOne(() => Job, (job) => job.members, {
-        nullable: false,
-        onDelete: "RESTRICT",
-    })
-    job!: Job;
+  @ManyToOne(() => Job, job => job.members, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+  })
+  job!: Job;
 }

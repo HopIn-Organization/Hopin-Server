@@ -8,6 +8,10 @@ router.get('/:id/status', onboardingController.getOnboardingStatus);
 router.get('/user/:userId/job/:jobId', onboardingController.getOnboarding);
 router.get('/id/:id', onboardingController.getOnboardingById);
 router.get('/project/:projectId', onboardingController.getOnboardingsByProject);
-router.post('/generate', requireProjectAdmin, onboardingController.generateOnboarding);
+router.post(
+  '/generate',
+  requireProjectAdmin,
+  onboardingController.generateOnboarding
+);
 
 export default router;

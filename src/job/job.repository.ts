@@ -1,7 +1,7 @@
-import { Repository } from "typeorm";
-import { AppDataSource } from "../database/data-source";
-import { Job } from "../job/job.entity";
-import { SkillRepository } from "../skill/skill.repository";
+import { Repository } from 'typeorm';
+import { AppDataSource } from '../database/data-source';
+import { Job } from '../job/job.entity';
+import { SkillRepository } from '../skill/skill.repository';
 
 export class JobRepository {
   private jobRepository: Repository<Job>;
@@ -9,22 +9,28 @@ export class JobRepository {
 
   constructor() {
     this.jobRepository = AppDataSource.getRepository(Job);
-    this.skillRepository = new SkillRepository;
+    this.skillRepository = new SkillRepository();
   }
 
   async findAll(): Promise<Job[]> {
     return this.jobRepository.find({
       relations: {
-        skills: true, project: true, members: { user: true, job: true },
+        skills: true,
+        project: true,
+        members: { user: true, job: true },
       },
-      order: { id: "DESC" },
+      order: { id: 'DESC' },
     });
   }
 
   async findById(id: number): Promise<Job | null> {
     return this.jobRepository.findOne({
       where: { id },
-      relations: { skills: true, project: true, members: { user: true, job: true } }
+      relations: {
+        skills: true,
+        project: true,
+        members: { user: true, job: true },
+      },
     });
   }
 
@@ -53,9 +59,7 @@ export class JobRepository {
     if (!job) return null;
 
     const skills = await Promise.all(
-      skillNames.map(name =>
-        this.skillRepository.findOrCreate({ name })
-      )
+      skillNames.map(name => this.skillRepository.findOrCreate({ name }))
     );
 
     const existingIds = new Set((job.skills || []).map(s => s.id));

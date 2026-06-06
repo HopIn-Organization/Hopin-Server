@@ -22,7 +22,9 @@ export class PineconeService {
     this.namespaceOverride = process.env.PINECONE_NAMESPACE || null;
 
     if (!apiKey || !indexName) {
-      console.warn('[Pinecone] PINECONE_API_KEY or PINECONE_INDEX_NAME not set — Pinecone disabled');
+      console.warn(
+        '[Pinecone] PINECONE_API_KEY or PINECONE_INDEX_NAME not set — Pinecone disabled'
+      );
       this.disabled = true;
       return;
     }
@@ -49,13 +51,13 @@ export class PineconeService {
       sourceFileName: string;
       embedding: number[];
     }>,
-    projectId: number,
+    projectId: number
   ): Promise<void> {
     if (this.disabled || !this.index || chunks.length === 0) return;
 
     try {
       const namespace = this.index.namespace(this.getNamespace(projectId));
-      const records = chunks.map((chunk) => ({
+      const records = chunks.map(chunk => ({
         id: this.buildVectorId(chunk.documentId, chunk.chunkIndex),
         values: chunk.embedding,
         metadata: {
@@ -74,7 +76,9 @@ export class PineconeService {
         await namespace.upsert({ records: batch });
       }
 
-      console.log(`[Pinecone] Upserted ${records.length} vectors for project ${projectId}`);
+      console.log(
+        `[Pinecone] Upserted ${records.length} vectors for project ${projectId}`
+      );
     } catch (error) {
       console.error('[Pinecone] Failed to upsert chunks:', error);
       // Do not rethrow — Pinecone failure must not crash extraction
@@ -85,7 +89,7 @@ export class PineconeService {
     queryEmbedding: number[],
     projectId: number,
     jobId: number | null,
-    topK: number = 5,
+    topK: number = 5
   ): Promise<PineconeChunkResult[]> {
     if (this.disabled || !this.index) return [];
 
@@ -106,8 +110,8 @@ export class PineconeService {
       });
 
       return (response.matches ?? [])
-        .filter((m) => m.metadata)
-        .map((m) => ({
+        .filter(m => m.metadata)
+        .map(m => ({
           text: String(m.metadata!.text ?? ''),
           score: m.score ?? 0,
           documentId: Number(m.metadata!.documentId),
@@ -121,13 +125,18 @@ export class PineconeService {
     }
   }
 
-  async deleteChunksByDocumentId(vectorIds: string[], projectId: number): Promise<void> {
+  async deleteChunksByDocumentId(
+    vectorIds: string[],
+    projectId: number
+  ): Promise<void> {
     if (this.disabled || !this.index || vectorIds.length === 0) return;
 
     try {
       const namespace = this.index.namespace(this.getNamespace(projectId));
       await namespace.deleteMany({ ids: vectorIds });
-      console.log(`[Pinecone] Deleted ${vectorIds.length} vectors for project ${projectId}`);
+      console.log(
+        `[Pinecone] Deleted ${vectorIds.length} vectors for project ${projectId}`
+      );
     } catch (error) {
       console.error('[Pinecone] Failed to delete chunks:', error);
     }

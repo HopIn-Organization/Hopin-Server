@@ -1,4 +1,19 @@
 import 'reflect-metadata';
+
+const _originalEmit = process.emit.bind(process);
+(process.emit as (...args: unknown[]) => boolean) = function (event: unknown, ...args: unknown[]) {
+  if (event === 'warning') {
+    const warning = args[0] as { name?: string; message?: string };
+    if (
+      warning?.name === 'DeprecationWarning' &&
+      warning?.message?.includes('client.query()')
+    ) {
+      return false;
+    }
+  }
+  return _originalEmit(event as string, ...args);
+};
+
 import app from './app';
 import { initializeDatabase } from './database';
 import { shutdownLangfuse } from './utils/langfuse';

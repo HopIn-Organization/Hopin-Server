@@ -25,7 +25,7 @@ type GeminiSubtask = {
 };
 
 const normalizeStringArray = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
+  Array.isArray(value) ? value.filter(item => typeof item === 'string') : [];
 
 const normalizeEstimatedDays = (value: unknown, path: string): number => {
   const numeric = typeof value === 'number' ? value : Number(value);
@@ -41,24 +41,34 @@ const normalizeSubtask = (
   subtaskIndex: number
 ): DeepPartial<Task> => {
   if (typeof value !== 'object' || value === null) {
-    throw new Error(`Subtask ${subtaskIndex + 1} of task ${taskIndex + 1} must be an object`);
+    throw new Error(
+      `Subtask ${subtaskIndex + 1} of task ${taskIndex + 1} must be an object`
+    );
   }
 
   const subtask = value as GeminiSubtask;
 
   if (typeof subtask.title !== 'string' || !subtask.title.trim()) {
-    throw new Error(`Subtask ${subtaskIndex + 1} of task ${taskIndex + 1} is missing a valid title`);
+    throw new Error(
+      `Subtask ${subtaskIndex + 1} of task ${taskIndex + 1} is missing a valid title`
+    );
   }
 
   if (typeof subtask.description !== 'string' || !subtask.description.trim()) {
-    throw new Error(`Subtask ${subtaskIndex + 1} of task ${taskIndex + 1} is missing a valid description`);
+    throw new Error(
+      `Subtask ${subtaskIndex + 1} of task ${taskIndex + 1} is missing a valid description`
+    );
   }
 
   return {
     title: subtask.title.trim(),
     description: subtask.description.trim(),
-    estimatedDays: normalizeEstimatedDays(subtask.estimatedDays, `subtask ${subtaskIndex + 1} of task ${taskIndex + 1}`),
-    isCompleted: typeof subtask.isCompleted === 'boolean' ? subtask.isCompleted : false,
+    estimatedDays: normalizeEstimatedDays(
+      subtask.estimatedDays,
+      `subtask ${subtaskIndex + 1} of task ${taskIndex + 1}`
+    ),
+    isCompleted:
+      typeof subtask.isCompleted === 'boolean' ? subtask.isCompleted : false,
     links: normalizeStringArray(subtask.links),
   };
 };
@@ -82,15 +92,26 @@ const normalizeTask = (
   }
 
   const normalizedSubtasks = Array.isArray(task.subtasks)
-    ? task.subtasks.map((subtask, subIndex) => normalizeSubtask(subtask, index, subIndex))
+    ? task.subtasks.map((subtask, subIndex) =>
+        normalizeSubtask(subtask, index, subIndex)
+      )
     : [];
 
   return {
-    order: typeof task.order === 'number' && Number.isInteger(task.order) && task.order > 0 ? task.order : index + 1,
+    order:
+      typeof task.order === 'number' &&
+      Number.isInteger(task.order) &&
+      task.order > 0
+        ? task.order
+        : index + 1,
     title: task.title.trim(),
     description: task.description.trim(),
-    estimatedDays: normalizeEstimatedDays(task.estimatedDays, `task ${index + 1}`),
-    isCompleted: typeof task.isCompleted === 'boolean' ? task.isCompleted : false,
+    estimatedDays: normalizeEstimatedDays(
+      task.estimatedDays,
+      `task ${index + 1}`
+    ),
+    isCompleted:
+      typeof task.isCompleted === 'boolean' ? task.isCompleted : false,
     links: normalizeStringArray(task.links),
     subtasks: normalizedSubtasks,
   };
@@ -131,13 +152,13 @@ export class LLMService {
 
     const usage = usageMetadata
       ? {
-        input: usageMetadata.promptTokenCount,
-        output: usageMetadata.candidatesTokenCount,
-        total:
-          (usageMetadata.promptTokenCount || 0) +
-          (usageMetadata.candidatesTokenCount || 0),
-        unit: 'TOKENS' as const,
-      }
+          input: usageMetadata.promptTokenCount,
+          output: usageMetadata.candidatesTokenCount,
+          total:
+            (usageMetadata.promptTokenCount || 0) +
+            (usageMetadata.candidatesTokenCount || 0),
+          unit: 'TOKENS' as const,
+        }
       : undefined;
 
     let rawResponse: unknown;
@@ -156,12 +177,16 @@ export class LLMService {
         },
       });
 
-      throw new Error(`Failed to parse Gemini response as JSON: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to parse Gemini response as JSON: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     const rawTasks = Array.isArray(rawResponse)
       ? rawResponse
-      : rawResponse && typeof rawResponse === 'object' && Array.isArray((rawResponse as { tasks?: unknown }).tasks)
+      : rawResponse &&
+          typeof rawResponse === 'object' &&
+          Array.isArray((rawResponse as { tasks?: unknown }).tasks)
         ? (rawResponse as { tasks: unknown }).tasks
         : undefined;
 
@@ -173,17 +198,22 @@ export class LLMService {
         trace: options?.trace,
         usage,
         metadata: {
-          error: 'Unexpected response structure from Gemini: expected array or object with tasks field',
+          error:
+            'Unexpected response structure from Gemini: expected array or object with tasks field',
         },
       });
 
-      throw new Error('Unexpected response structure from Gemini: expected array or object with tasks field');
+      throw new Error(
+        'Unexpected response structure from Gemini: expected array or object with tasks field'
+      );
     }
 
     let normalizedTasks: DeepPartial<Task>[];
 
     try {
-      normalizedTasks = rawTasks.map((rawTask, index) => normalizeTask(rawTask, index));
+      normalizedTasks = rawTasks.map((rawTask, index) =>
+        normalizeTask(rawTask, index)
+      );
     } catch (error) {
       await reportLLMTrace({
         prompt,

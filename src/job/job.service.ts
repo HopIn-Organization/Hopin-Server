@@ -1,5 +1,5 @@
-import { Job } from "./job.entity";
-import { JobRepository } from "./job.repository";
+import { Job } from './job.entity';
+import { JobRepository } from './job.repository';
 
 export class JobService {
   private jobRepository: JobRepository;

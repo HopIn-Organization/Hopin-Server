@@ -9,6 +9,10 @@ const jobController = new JobController();
 router.get('/', jobController.getAllJobs);
 router.get('/:jobId', jobController.getJobById);
 router.post('/', requireProjectAdmin, jobController.createJob);
-router.post('/:jobId/skills', requireProjectAdmin, jobController.addSkillsToJob);
+router.post(
+  '/:jobId/skills',
+  requireProjectAdmin,
+  jobController.addSkillsToJob
+);
 
 export default router;

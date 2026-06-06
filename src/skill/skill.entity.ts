@@ -5,18 +5,17 @@ import {
   JoinTable,
   ManyToMany,
   PrimaryGeneratedColumn,
-} from "typeorm";
-import { User } from "../database/entities/user.entity";
-import { Job } from "../job/job.entity";
+} from 'typeorm';
+import { User } from '../database/entities/user.entity';
+import { Job } from '../job/job.entity';
 
-
-@Entity({ name: "skills" })
+@Entity({ name: 'skills' })
 export class Skill {
-  @PrimaryGeneratedColumn({ type: "integer", name: "id" })
+  @PrimaryGeneratedColumn({ type: 'integer', name: 'id' })
   id!: number;
 
-  @Index("uq_skills_name", { unique: true })
-  @Column({ type: "text", name: "name" })
+  @Index('uq_skills_name', { unique: true })
+  @Column({ type: 'text', name: 'name' })
   name!: string;
 
   @ManyToMany(() => Job, job => job.skills)
@@ -24,14 +23,14 @@ export class Skill {
 
   @ManyToMany(() => User, user => user.skills)
   @JoinTable({
-    name: "user_skills",
+    name: 'user_skills',
     joinColumn: {
-      name: "skill_id",
-      referencedColumnName: "id",
+      name: 'skill_id',
+      referencedColumnName: 'id',
     },
     inverseJoinColumn: {
-      name: "user_id",
-      referencedColumnName: "id",
+      name: 'user_id',
+      referencedColumnName: 'id',
     },
   })
   users!: User[];

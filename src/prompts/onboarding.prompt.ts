@@ -55,8 +55,8 @@ export function buildOnboardingPrompt(input: OnboardingPromptInput): string {
   const documentSection =
     documents.length > 0
       ? documents
-        .map((doc, i) => `--- Document ${i + 1} ---\n${doc}`)
-        .join('\n\n')
+          .map((doc, i) => `--- Document ${i + 1} ---\n${doc}`)
+          .join('\n\n')
       : `--- Default Company Guidelines ---\n${DEFAULT_COMPANY_DOCUMENT}`;
 
   return `

@@ -7,40 +7,40 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-} from "typeorm";
-import { Project } from "./../project/project.entity";
-import { ProjectMember } from "../projectMember/projectMember.entity";
-import { Skill } from "../skill/skill.entity";
+} from 'typeorm';
+import { Project } from './../project/project.entity';
+import { ProjectMember } from '../projectMember/projectMember.entity';
+import { Skill } from '../skill/skill.entity';
 
-@Entity({ name: "jobs" })
+@Entity({ name: 'jobs' })
 export class Job {
-  @PrimaryGeneratedColumn({ type: "integer", name: "id" })
+  @PrimaryGeneratedColumn({ type: 'integer', name: 'id' })
   id!: number;
 
-  @Column({ type: "text", name: "title" })
+  @Column({ type: 'text', name: 'title' })
   title!: string;
 
   @ManyToOne(() => Project, project => project.jobs, {
     nullable: true,
-    onDelete: "SET NULL",
+    onDelete: 'SET NULL',
   })
-  @JoinColumn({ name: "project_id" })
+  @JoinColumn({ name: 'project_id' })
   project!: Project | null;
 
   @ManyToMany(() => Skill, skill => skill.jobs)
   @JoinTable({
-    name: "job_skills",
+    name: 'job_skills',
     joinColumn: {
-      name: "job_id",
-      referencedColumnName: "id",
+      name: 'job_id',
+      referencedColumnName: 'id',
     },
     inverseJoinColumn: {
-      name: "skill_id",
-      referencedColumnName: "id",
+      name: 'skill_id',
+      referencedColumnName: 'id',
     },
   })
   skills!: Skill[];
 
-  @OneToMany(() => ProjectMember, (member) => member.job)
+  @OneToMany(() => ProjectMember, member => member.job)
   members!: ProjectMember[];
 }
