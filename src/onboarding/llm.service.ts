@@ -38,7 +38,9 @@ export class LLMService {
     const parsed: GeminiResponse = JSON.parse(text);
 
     if (!Array.isArray(parsed.tasks)) {
-      throw new Error('Unexpected response structure from Gemini: missing tasks array');
+      throw new Error(
+        'Unexpected response structure from Gemini: missing tasks array'
+      );
     }
 
     return parsed.tasks;

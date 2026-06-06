@@ -16,7 +16,7 @@ export class DocumentChunkingService {
     documentId: number,
     projectId: number,
     jobId: number | null,
-    sourceFileName: string,
+    sourceFileName: string
   ): ChunkInput[] {
     if (!text || !text.trim()) {
       return [];
@@ -43,7 +43,9 @@ export class DocumentChunkingService {
         let sentenceChunk = overlap;
 
         for (const sentence of sentences) {
-          const candidate = sentenceChunk ? sentenceChunk + ' ' + sentence : sentence;
+          const candidate = sentenceChunk
+            ? sentenceChunk + ' ' + sentence
+            : sentence;
           if (candidate.length > CHUNK_MAX_CHARS && sentenceChunk.trim()) {
             if (sentenceChunk.trim().length >= MIN_CHUNK_CHARS) {
               chunks.push(sentenceChunk.trim());
@@ -77,7 +79,8 @@ export class DocumentChunkingService {
         }
         // Last paragraph becomes overlap for next chunk; prefer sentence-split
         // overlap when set, otherwise derive from the last paragraph in current.
-        const lastParagraph = overlap || (current.split(/\n\n/).pop()?.trim() ?? '');
+        const lastParagraph =
+          overlap || (current.split(/\n\n/).pop()?.trim() ?? '');
         overlap = lastParagraph;
         current = lastParagraph ? lastParagraph + '\n\n' + trimmed : trimmed;
       } else {

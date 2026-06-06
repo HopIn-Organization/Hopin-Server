@@ -23,7 +23,17 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME,
   synchronize: process.env.DB_SYNCHRONIZE === 'true',
   logging: process.env.DB_LOGGING === 'true',
-  entities: [User, Job, Project, ProjectMember, Skill, OnBoarding, Task, ProjectDocument, DocumentChunk],
+  entities: [
+    User,
+    Job,
+    Project,
+    ProjectMember,
+    Skill,
+    OnBoarding,
+    Task,
+    ProjectDocument,
+    DocumentChunk,
+  ],
   migrations: [path.join(__dirname, 'migrations', '*.{ts,js}')],
   subscribers: [path.join(__dirname, 'subscribers', '*.{ts,js}')],
 });

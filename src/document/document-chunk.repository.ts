@@ -24,7 +24,10 @@ export class DocumentChunkRepository {
     await this.repository.save(chunks);
   }
 
-  async findByJobId(projectId: number, jobId: number): Promise<DocumentChunk[]> {
+  async findByJobId(
+    projectId: number,
+    jobId: number
+  ): Promise<DocumentChunk[]> {
     return this.repository.find({
       where: [
         { projectId, jobId },

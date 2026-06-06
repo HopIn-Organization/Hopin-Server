@@ -73,7 +73,19 @@ export class TaskController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { id, order, title, description, estimatedDays, isCompleted, links, onboardingId, parentId, subtasks, projectId } = req.body;
+      const {
+        id,
+        order,
+        title,
+        description,
+        estimatedDays,
+        isCompleted,
+        links,
+        onboardingId,
+        parentId,
+        subtasks,
+        projectId,
+      } = req.body;
 
       if (!projectId || typeof projectId !== 'number') {
         res.status(400).json({ error: 'projectId is required' });
@@ -81,8 +93,16 @@ export class TaskController {
       }
 
       if (id === undefined) {
-        if (typeof order !== 'number' || typeof title !== 'string' || typeof description !== 'string' || typeof estimatedDays !== 'number') {
-          res.status(400).json({ error: 'order (number), title (string), description (string), and estimatedDays (number) are required when creating a task' });
+        if (
+          typeof order !== 'number' ||
+          typeof title !== 'string' ||
+          typeof description !== 'string' ||
+          typeof estimatedDays !== 'number'
+        ) {
+          res.status(400).json({
+            error:
+              'order (number), title (string), description (string), and estimatedDays (number) are required when creating a task',
+          });
           return;
         }
       } else if (typeof id !== 'number') {
@@ -101,8 +121,15 @@ export class TaskController {
             return;
           }
           if (s.id === undefined) {
-            if (typeof s.title !== 'string' || typeof s.description !== 'string' || typeof s.estimatedDays !== 'number') {
-              res.status(400).json({ error: 'title (string), description (string), and estimatedDays (number) are required when creating a subtask' });
+            if (
+              typeof s.title !== 'string' ||
+              typeof s.description !== 'string' ||
+              typeof s.estimatedDays !== 'number'
+            ) {
+              res.status(400).json({
+                error:
+                  'title (string), description (string), and estimatedDays (number) are required when creating a subtask',
+              });
               return;
             }
           }
@@ -110,18 +137,39 @@ export class TaskController {
             res.status(400).json({ error: 'subtask title must be a string' });
             return;
           }
-          if (s.description !== undefined && typeof s.description !== 'string') {
-            res.status(400).json({ error: 'subtask description must be a string' });
+          if (
+            s.description !== undefined &&
+            typeof s.description !== 'string'
+          ) {
+            res
+              .status(400)
+              .json({ error: 'subtask description must be a string' });
             return;
           }
-          if (s.estimatedDays !== undefined && typeof s.estimatedDays !== 'number') {
-            res.status(400).json({ error: 'subtask estimatedDays must be a number' });
+          if (
+            s.estimatedDays !== undefined &&
+            typeof s.estimatedDays !== 'number'
+          ) {
+            res
+              .status(400)
+              .json({ error: 'subtask estimatedDays must be a number' });
             return;
           }
         }
       }
 
-      const task = await this.taskService.upsertTask({ id, order, title, description, estimatedDays, isCompleted, links, onboardingId, parentId, subtasks });
+      const task = await this.taskService.upsertTask({
+        id,
+        order,
+        title,
+        description,
+        estimatedDays,
+        isCompleted,
+        links,
+        onboardingId,
+        parentId,
+        subtasks,
+      });
 
       if (task === null) {
         res.status(404).json({ error: 'Task not found' });

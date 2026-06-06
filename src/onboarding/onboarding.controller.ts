@@ -56,14 +56,13 @@ export class OnboardingController {
 
       const trace = req.langfuseTrace;
 
-      const onboardingId =
-        await this.onboardingService.startGeneration({
-          userId,
-          jobId,
-          documents,
-          daysDuration,
-          trace,
-        });
+      const onboardingId = await this.onboardingService.startGeneration({
+        userId,
+        jobId,
+        documents,
+        daysDuration,
+        trace,
+      });
 
       this.onboardingService
         .runGeneration(onboardingId, {
@@ -73,7 +72,7 @@ export class OnboardingController {
           daysDuration,
           trace,
         })
-        .catch((err) =>
+        .catch(err =>
           console.error(
             `[Onboarding] Unhandled error in runGeneration id=${onboardingId}:`,
             err
@@ -99,8 +98,7 @@ export class OnboardingController {
         return;
       }
 
-      const result =
-        await this.onboardingService.getOnboardingStatus(id);
+      const result = await this.onboardingService.getOnboardingStatus(id);
 
       if (!result) {
         res.status(404).json({ error: 'Onboarding not found' });
@@ -153,8 +151,10 @@ export class OnboardingController {
         return;
       }
 
-      const onboarding =
-        await this.onboardingService.getOnboarding(userId, jobId);
+      const onboarding = await this.onboardingService.getOnboarding(
+        userId,
+        jobId
+      );
 
       if (!onboarding) {
         res.status(404).json({ error: 'Onboarding not found' });

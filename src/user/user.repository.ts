@@ -12,14 +12,20 @@ export class UserRepository {
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      relations: { skills: true, projectMemberships: { project: true, job: true } }
+      relations: {
+        skills: true,
+        projectMemberships: { project: true, job: true },
+      },
     });
   }
 
   async findById(id: number): Promise<User | null> {
     return this.userRepository.findOne({
       where: { id },
-      relations: { skills: true, projectMemberships: { project: true, job: true } }
+      relations: {
+        skills: true,
+        projectMemberships: { project: true, job: true },
+      },
     });
   }
 
@@ -54,7 +60,11 @@ export class UserRepository {
     return this.userRepository.save(user);
   }
 
-  async storeRefreshToken(userId: number, refreshTokenHash: string, refreshTokenExpiresAt: Date): Promise<void> {
+  async storeRefreshToken(
+    userId: number,
+    refreshTokenHash: string,
+    refreshTokenExpiresAt: Date
+  ): Promise<void> {
     await this.userRepository.update(userId, {
       refreshTokenHash,
       refreshTokenExpiresAt,
@@ -86,13 +96,18 @@ export class UserRepository {
     const manager = AppDataSource.manager;
     await manager.query(`DELETE FROM user_skills WHERE user_id = $1`, [id]);
     if (data.skills.length > 0) {
-      const placeholders = data.skills.map((_, i) => `($1, $${i + 2})`).join(', ');
+      const placeholders = data.skills
+        .map((_, i) => `($1, $${i + 2})`)
+        .join(', ');
       await manager.query(
         `INSERT INTO user_skills (user_id, skill_id) VALUES ${placeholders}`,
-        [id, ...data.skills.map((s) => s.id)]
+        [id, ...data.skills.map(s => s.id)]
       );
     }
 
-    return this.userRepository.findOne({ where: { id }, relations: { skills: true } });
+    return this.userRepository.findOne({
+      where: { id },
+      relations: { skills: true },
+    });
   }
 }

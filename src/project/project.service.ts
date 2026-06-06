@@ -1,15 +1,19 @@
-import { Project } from "./project.entity";
-import { ProjectRepository } from "./project.repository";
-import { JobRepository } from "../job/job.repository";
-import { Job } from "../job/job.entity";
-import { SkillRepository } from "../skill/skill.repository";
-import { Skill } from "../skill/skill.entity";
-import { ProjectMemberRepository } from "../projectMember/projectMember.repository";
-import { ProjectMember, ProjectRole } from "../projectMember/projectMember.entity";
-import { DocumentRepository } from "../document/document.repository";
-import { DocumentChunkRepository } from "../document/document-chunk.repository";
-import { S3Service } from "../document/s3.service";
-import { PineconeService } from "../document/pinecone.service";
+import { Project } from './project.entity';
+import { ProjectRepository } from './project.repository';
+import { JobRepository } from '../job/job.repository';
+import { Job } from '../job/job.entity';
+import { SkillRepository } from '../skill/skill.repository';
+import { Skill } from '../skill/skill.entity';
+import { ProjectMemberRepository } from '../projectMember/projectMember.repository';
+import {
+  ProjectMember,
+  ProjectRole,
+} from '../projectMember/projectMember.entity';
+import { DocumentRepository } from '../document/document.repository';
+import { DocumentChunkRepository } from '../document/document-chunk.repository';
+import { S3Service } from '../document/s3.service';
+import { PineconeService } from '../document/pinecone.service';
+import { TaskRepository } from '../task/task.repository';
 
 interface UpsertProjectPayload {
   name: string;
@@ -33,6 +37,7 @@ export class ProjectService {
   private documentChunkRepository: DocumentChunkRepository;
   private s3Service: S3Service;
   private pineconeService: PineconeService;
+  private taskRepository: TaskRepository;
 
   constructor() {
     this.projectRepository = new ProjectRepository();
@@ -43,6 +48,7 @@ export class ProjectService {
     this.documentChunkRepository = new DocumentChunkRepository();
     this.s3Service = new S3Service();
     this.pineconeService = new PineconeService();
+    this.taskRepository = new TaskRepository();
   }
 
   async getAllProjects(): Promise<Project[]> {
@@ -57,7 +63,10 @@ export class ProjectService {
     return this.projectRepository.findById(id);
   }
 
-  async upsertProject(payload: UpsertProjectPayload, id?: number): Promise<Project> {
+  async upsertProject(
+    payload: UpsertProjectPayload,
+    id?: number
+  ): Promise<Project> {
     let project: Project;
     let existingJobs: Job[] = [];
 
@@ -104,7 +113,10 @@ export class ProjectService {
           jobToUpdate.skills = processedSkills;
           await this.jobRepository.save(jobToUpdate);
         } else {
-          const job = await this.jobRepository.create({ title: jobData.title, project });
+          const job = await this.jobRepository.create({
+            title: jobData.title,
+            project,
+          });
           job.skills = processedSkills;
           await this.jobRepository.save(job);
           jobs.push(job);
@@ -117,11 +129,17 @@ export class ProjectService {
         let member: ProjectMember | null = null;
 
         if (memberData.userId) {
-          member = await this.projectMemberRepository.findByProjectAndId(project.id, memberData.userId);
+          member = await this.projectMemberRepository.findByProjectAndId(
+            project.id,
+            memberData.userId
+          );
         }
 
         if (!member) {
-          member = await this.projectMemberRepository.findByUserAndProject(memberData.userId, project.id);
+          member = await this.projectMemberRepository.findByUserAndProject(
+            memberData.userId,
+            project.id
+          );
         }
 
         let resolvedJobId = memberData.jobId;
@@ -162,23 +180,39 @@ export class ProjectService {
     const project = await this.projectRepository.findById(id);
     if (!project) throw new Error('Project not found');
 
+    console.log(`[deleteProject] Starting deletion for project id=${id}`);
+
     // Delete S3 documents and Pinecone vectors first
     const documents = await this.documentRepository.findAllByProjectId(id);
+    console.log(`[deleteProject] Found ${documents.length} document(s) to clean up`);
     for (const doc of documents) {
       await this.s3Service.delete(doc.s3Key);
 
-      const chunks = await this.documentChunkRepository.findByDocumentId(doc.id);
+      const chunks = await this.documentChunkRepository.findByDocumentId(
+        doc.id
+      );
       if (chunks.length > 0) {
-        const vectorIds = chunks.map((c) => `chunk-${c.documentId}-${c.chunkIndex}`);
+        const vectorIds = chunks.map(
+          c => `chunk-${c.documentId}-${c.chunkIndex}`
+        );
         await this.pineconeService.deleteChunksByDocumentId(vectorIds, id);
       }
     }
+    console.log(`[deleteProject] S3/Pinecone cleanup done`);
+
+    // Delete tasks before project members/project to avoid FK violations.
+    // task.onboarding_id has NO ACTION, so tasks must be removed before their
+    // onboarding rows are cascade-deleted when the project row is deleted.
+    await this.taskRepository.deleteByProjectId(id);
+    console.log(`[deleteProject] Tasks deleted`);
 
     // Delete project members (no DB cascade)
     await this.projectMemberRepository.deleteByProjectId(id);
+    console.log(`[deleteProject] Members deleted`);
 
-    // Delete project (DB cascade handles project_documents records)
+    // Delete project (DB cascade handles onboarding, project_documents, and job records)
     await this.projectRepository.delete(id);
+    console.log(`[deleteProject] Project row deleted — done`);
   }
 
   // convenience aliases
@@ -186,7 +220,10 @@ export class ProjectService {
     return this.upsertProject(payload);
   }
 
-  async updateProject(id: number, payload: UpsertProjectPayload): Promise<Project> {
+  async updateProject(
+    id: number,
+    payload: UpsertProjectPayload
+  ): Promise<Project> {
     return this.upsertProject(payload, id);
   }
 }

@@ -37,7 +37,7 @@ export class OnboardingService {
     const tasks = onboarding.tasks ?? [];
     const totalDays = tasks.reduce((sum, t) => sum + t.estimatedDays, 0);
     const completedDays = tasks
-      .filter((t) => t.isCompleted)
+      .filter(t => t.isCompleted)
       .reduce((sum, t) => sum + t.estimatedDays, 0);
     return +(totalDays > 0 ? (completedDays / totalDays) * 100 : 0).toFixed(2);
   }
@@ -51,19 +51,23 @@ export class OnboardingService {
     return onboarding ? this.withProgress(onboarding) : null;
   }
 
-  async getOnboardingsByProject(projectId: number): Promise<OnboardingWithProgress[]> {
-    const onboardings = await this.onboardingRepository.getOnboardingsByProjectId(projectId);
-    return onboardings.map((o) => this.withProgress(o));
+  async getOnboardingsByProject(
+    projectId: number
+  ): Promise<OnboardingWithProgress[]> {
+    const onboardings =
+      await this.onboardingRepository.getOnboardingsByProjectId(projectId);
+    return onboardings.map(o => this.withProgress(o));
   }
 
   async getOnboarding(
     userId: number,
-    jobId: number,
+    jobId: number
   ): Promise<OnboardingWithProgress | null> {
-    const onboarding = await this.onboardingRepository.getOnboardingByUserIdAndJobId(
-      userId,
-      jobId
-    );
+    const onboarding =
+      await this.onboardingRepository.getOnboardingByUserIdAndJobId(
+        userId,
+        jobId
+      );
     return onboarding ? this.withProgress(onboarding) : null;
   }
 
@@ -75,12 +79,18 @@ export class OnboardingService {
 
     const [user, job] = await Promise.all([
       userRepo.findOne({ where: { id: userId }, relations: { skills: true } }),
-      jobRepo.findOne({ where: { id: jobId }, relations: { skills: true, project: true } }),
+      jobRepo.findOne({
+        where: { id: jobId },
+        relations: { skills: true, project: true },
+      }),
     ]);
 
     if (!user) throw new Error(`User with id ${userId} not found`);
     if (!job) throw new Error(`Job with id ${jobId} not found`);
-    if (!job.project) throw new Error(`Job with id ${jobId} is not associated with any project`);
+    if (!job.project)
+      throw new Error(
+        `Job with id ${jobId} is not associated with any project`
+      );
 
     const onboarding = await this.onboardingRepository.createOnboarding({
       userId: user.id,
@@ -92,7 +102,10 @@ export class OnboardingService {
     return onboarding.id;
   }
 
-  async runGeneration(onboardingId: number, input: GenerateOnboardingInput): Promise<void> {
+  async runGeneration(
+    onboardingId: number,
+    input: GenerateOnboardingInput
+  ): Promise<void> {
     const { userId, jobId, daysDuration } = input;
 
     try {
@@ -102,13 +115,22 @@ export class OnboardingService {
       const jobRepo = AppDataSource.getRepository(Job);
 
       const [user, job] = await Promise.all([
-        userRepo.findOne({ where: { id: userId }, relations: { skills: true } }),
-        jobRepo.findOne({ where: { id: jobId }, relations: { skills: true, project: true } }),
+        userRepo.findOne({
+          where: { id: userId },
+          relations: { skills: true },
+        }),
+        jobRepo.findOne({
+          where: { id: jobId },
+          relations: { skills: true, project: true },
+        }),
       ]);
 
       if (!user) throw new Error(`User with id ${userId} not found`);
       if (!job) throw new Error(`Job with id ${jobId} not found`);
-      if (!job.project) throw new Error(`Job with id ${jobId} is not associated with any project`);
+      if (!job.project)
+        throw new Error(
+          `Job with id ${jobId} is not associated with any project`
+        );
 
       // Auto-fetch relevant document chunks from Pinecone/Postgres
       let ragDocuments: string[] = input.documents ?? [];
@@ -117,7 +139,7 @@ export class OnboardingService {
       const embeddingService = new DocumentEmbeddingService();
 
       // Build a semantic query from job context
-      const queryText = [job.title, ...job.skills.map((s) => s.name)].join(', ');
+      const queryText = [job.title, ...job.skills.map(s => s.name)].join(', ');
       try {
         const [queryEmbedding] = await embeddingService.embedBatch([queryText]);
         if (queryEmbedding && queryEmbedding.length > 0) {
@@ -125,14 +147,20 @@ export class OnboardingService {
             job.project.id,
             job.id,
             queryEmbedding,
-            5,
+            5
           );
           if (chunks.length > 0) {
-            ragDocuments = [...chunks.map((c) => c.text), ...(input.documents ?? [])];
+            ragDocuments = [
+              ...chunks.map(c => c.text),
+              ...(input.documents ?? []),
+            ];
           }
         }
       } catch (err) {
-        console.warn('[Onboarding] RAG retrieval failed, using provided documents:', err);
+        console.warn(
+          '[Onboarding] RAG retrieval failed, using provided documents:',
+          err
+        );
         ragDocuments = input.documents ?? [];
       }
 
@@ -140,34 +168,41 @@ export class OnboardingService {
         onboardingId,
         userName: user.name,
         userExperienceYears: user.experienceYears,
-        userSkills: user.skills.map((s) => s.name),
+        userSkills: user.skills.map(s => s.name),
         jobTitle: job.title,
-        jobRequiredSkills: job.skills.map((s) => s.name),
+        jobRequiredSkills: job.skills.map(s => s.name),
         projectName: job.project.name,
         projectDescription: job.project.description,
         documents: ragDocuments,
         daysDuration,
       });
 
-      console.log(`[Onboarding] Sending prompt to LLM for onboarding id=${onboardingId}`);
+      console.log(
+        `[Onboarding] Sending prompt to LLM for onboarding id=${onboardingId}`
+      );
       const tasks = await this.llmService.generateOnboardingTasks(prompt, {
         trace: input.trace,
         sessionId: `${input.userId}-${input.jobId}`,
         userId: `${input.userId}`,
       });
 
-      console.log(`[Onboarding] LLM returned ${tasks?.length} tasks for onboarding id=${onboardingId}`);
+      console.log(
+        `[Onboarding] LLM returned ${tasks?.length} tasks for onboarding id=${onboardingId}`
+      );
 
       const onboardingEntity = { id: onboardingId } as OnBoarding;
 
       const savedParents = await this.taskService.createTasks(
-        tasks?.map(task => ({ ...task, subtasks: undefined, onboarding: onboardingEntity }))
+        tasks?.map(task => ({
+          ...task,
+          subtasks: undefined,
+          onboarding: onboardingEntity,
+        }))
       );
 
-      const parentByOrder = new Map(savedParents?.map((p) => [p.order, p]));
+      const parentByOrder = new Map(savedParents?.map(p => [p.order, p]));
 
-      const subtaskData: DeepPartial<Task>[] = tasks.flatMap((task) => {
-
+      const subtaskData: DeepPartial<Task>[] = tasks.flatMap(task => {
         if (!task.order) return [];
 
         const parent = parentByOrder.get(task.order);
@@ -185,17 +220,25 @@ export class OnboardingService {
         }));
       });
 
-
       if (subtaskData?.length > 0) {
         await this.taskService.createTasks(subtaskData);
       }
 
       await this.onboardingRepository.updateStatus(onboardingId, 'ready');
-      console.log(`[Onboarding] Generation complete for onboarding id=${onboardingId}`);
+      console.log(
+        `[Onboarding] Generation complete for onboarding id=${onboardingId}`
+      );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      console.error(`[Onboarding] Generation failed for onboarding id=${onboardingId}:`, reason);
-      await this.onboardingRepository.updateStatus(onboardingId, 'failed', reason);
+      console.error(
+        `[Onboarding] Generation failed for onboarding id=${onboardingId}:`,
+        reason
+      );
+      await this.onboardingRepository.updateStatus(
+        onboardingId,
+        'failed',
+        reason
+      );
     }
   }
 

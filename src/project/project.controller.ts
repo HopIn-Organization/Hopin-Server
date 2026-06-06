@@ -76,6 +76,7 @@ export class ProjectController {
       await this.projectService.deleteProject(id);
       res.status(204).send();
     } catch (error: any) {
+      console.error('[deleteProject] Error:', error?.message, error?.stack);
       if (error.message === 'Project not found') {
         res.status(404).json({ message: 'Project not found' });
       } else {

@@ -8,14 +8,21 @@ function getAvatarInitials(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
-function toProfileResponse(user: { id: number; name: string; email: string; birthDate?: string | null; workExperience?: Array<{ id: string; title: string; years: number }>; skills?: Array<{ name: string }> }) {
+function toProfileResponse(user: {
+  id: number;
+  name: string;
+  email: string;
+  birthDate?: string | null;
+  workExperience?: Array<{ id: string; title: string; years: number }>;
+  skills?: Array<{ name: string }>;
+}) {
   return {
     id: String(user.id),
     fullName: user.name,
     email: user.email,
     birthDate: user.birthDate ?? '',
     avatarInitials: getAvatarInitials(user.name),
-    keySkills: user.skills?.map((s) => s.name) ?? [],
+    keySkills: user.skills?.map(s => s.name) ?? [],
     workExperience: user.workExperience ?? [],
   };
 }
@@ -57,7 +64,9 @@ export class ProfileController {
       }
 
       const skills = await Promise.all(
-        ((keySkills as string[]) ?? []).map((name) => this.skillRepository.findOrCreate({ name }))
+        ((keySkills as string[]) ?? []).map(name =>
+          this.skillRepository.findOrCreate({ name })
+        )
       );
 
       const user = await this.userRepository.updateProfile(userId, {

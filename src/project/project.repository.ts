@@ -1,6 +1,6 @@
-import { Repository } from "typeorm";
-import { AppDataSource } from "../database/data-source";
-import { Project } from "../project/project.entity";
+import { Repository } from 'typeorm';
+import { AppDataSource } from '../database/data-source';
+import { Project } from '../project/project.entity';
 
 export class ProjectRepository {
   private repository: Repository<Project>;
@@ -12,25 +12,25 @@ export class ProjectRepository {
   async findAll(): Promise<Project[]> {
     return this.repository.find({
       relations: { jobs: { skills: true }, members: { user: true, job: true } },
-      order: { id: "DESC" },
+      order: { id: 'DESC' },
     });
   }
 
   async findByUserId(userId: number): Promise<Project[]> {
     const projectIds = await this.repository
-      .createQueryBuilder("project")
-      .innerJoin("project.members", "member")
-      .innerJoin("member.user", "user")
-      .where("user.id = :userId", { userId })
-      .select("project.id")
+      .createQueryBuilder('project')
+      .innerJoin('project.members', 'member')
+      .innerJoin('member.user', 'user')
+      .where('user.id = :userId', { userId })
+      .select('project.id')
       .getMany();
 
     if (projectIds.length === 0) return [];
 
     return this.repository.find({
-      where: projectIds.map((p) => ({ id: p.id })),
+      where: projectIds.map(p => ({ id: p.id })),
       relations: { jobs: { skills: true }, members: { user: true, job: true } },
-      order: { id: "DESC" },
+      order: { id: 'DESC' },
     });
   }
 
@@ -39,8 +39,8 @@ export class ProjectRepository {
       where: { id },
       relations: { jobs: { skills: true }, members: { user: true, job: true } },
       order: {
-        members: { id: "DESC" }
-      }
+        members: { id: 'DESC' },
+      },
     });
   }
 

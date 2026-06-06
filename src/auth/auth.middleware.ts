@@ -3,7 +3,11 @@ import { AuthService } from './auth.service';
 
 const authService = new AuthService();
 
-export const authenticateAccessToken = (req: Request, res: Response, next: NextFunction): void => {
+export const authenticateAccessToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
