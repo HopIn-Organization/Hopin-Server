@@ -14,6 +14,7 @@ import { DocumentChunkRepository } from '../document/document-chunk.repository';
 import { S3Service } from '../document/s3.service';
 import { PineconeService } from '../document/pinecone.service';
 import { TaskRepository } from '../task/task.repository';
+import { OnboardingRepository } from '../onboarding/onBoarding.repository';
 
 interface UpsertProjectPayload {
   name: string;
@@ -38,6 +39,7 @@ export class ProjectService {
   private s3Service: S3Service;
   private pineconeService: PineconeService;
   private taskRepository: TaskRepository;
+  private onboardingRepository: OnboardingRepository;
 
   constructor() {
     this.projectRepository = new ProjectRepository();
@@ -49,6 +51,7 @@ export class ProjectService {
     this.s3Service = new S3Service();
     this.pineconeService = new PineconeService();
     this.taskRepository = new TaskRepository();
+    this.onboardingRepository = new OnboardingRepository();
   }
 
   async getAllProjects(): Promise<Project[]> {
@@ -225,5 +228,126 @@ export class ProjectService {
     payload: UpsertProjectPayload
   ): Promise<Project> {
     return this.upsertProject(payload, id);
+  }
+
+  async getDetailedStatistics(projectId: number) {
+    const project = await this.projectRepository.findById(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const onboardings =
+      await this.onboardingRepository.getOnboardingsByProjectId(projectId);
+
+    // --- Avg Onboard Days ---
+    // Sum estimatedDays across all root tasks for each onboarding, then average.
+    const onboardDays = onboardings.map(ob => {
+      const rootTasks = (ob.tasks ?? []).filter(t => !t.parent);
+      return rootTasks.reduce((sum, t) => sum + (t.estimatedDays ?? 0), 0);
+    });
+    const avgOnboardDays =
+      onboardDays.length > 0
+        ? Math.round(
+            onboardDays.reduce((a, b) => a + b, 0) / onboardDays.length
+          )
+        : 0;
+
+    // --- Slowest Tasks ---
+    // Aggregate all root tasks across onboardings, find the ones with highest estimatedDays.
+    const taskDurations = new Map<string, number>();
+    for (const ob of onboardings) {
+      for (const task of ob.tasks ?? []) {
+        if (task.parent) continue; // skip subtasks
+        const current = taskDurations.get(task.title) ?? 0;
+        taskDurations.set(
+          task.title,
+          Math.max(current, task.estimatedDays ?? 0)
+        );
+      }
+    }
+    const sortedTasks = [...taskDurations.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+    const maxDuration = sortedTasks.length > 0 ? sortedTasks[0]![1] : 1;
+
+    const taskColors = ['#F87171', '#FBBF24', '#34D399'];
+    const slowestTasks = sortedTasks.map(([name, days], index) => ({
+      name,
+      duration: days >= 1 ? `${Math.round(days)} day${Math.round(days) !== 1 ? 's' : ''}` : `${Math.round(days * 24)} hours`,
+      percentage: Math.round((days / maxDuration) * 100),
+      color: taskColors[index] ?? '#9CA3AF',
+    }));
+
+    // --- Overdue Members ---
+    // A member is "overdue" if elapsed calendar days > total estimatedDays and tasks are incomplete.
+    const overdueMembers: Array<{ initials: string; label: string }> = [];
+    const now = new Date();
+    for (const ob of onboardings) {
+      const rootTasks = (ob.tasks ?? []).filter(t => !t.parent);
+      const totalEstimatedDays = rootTasks.reduce(
+        (sum, t) => sum + (t.estimatedDays ?? 0),
+        0
+      );
+      const allCompleted =
+        rootTasks.length > 0 && rootTasks.every(t => t.isCompleted);
+
+      if (allCompleted || totalEstimatedDays === 0) continue;
+
+      const startDate = ob.createdAt ? new Date(ob.createdAt) : null;
+      if (!startDate) continue;
+
+      const elapsedMs = now.getTime() - startDate.getTime();
+      const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+      const overdueDays = elapsedDays - Math.ceil(totalEstimatedDays);
+
+      if (overdueDays > 0) {
+        const userName = ob.user?.name ?? 'Unknown';
+        const parts = userName.split(' ');
+        const initials = parts
+          .slice(0, 2)
+          .map(p => p.charAt(0).toUpperCase())
+          .join('');
+        const label =
+          overdueDays >= 7
+            ? `${Math.round(overdueDays / 7)} week${Math.round(overdueDays / 7) !== 1 ? 's' : ''} over`
+            : `${overdueDays} day${overdueDays !== 1 ? 's' : ''} over`;
+
+        overdueMembers.push({ initials, label });
+      }
+    }
+
+    // --- Employee Progress ---
+    // For each trainee onboarding, show planned vs actual completed tasks.
+    const employeeProgress = onboardings.map(ob => {
+      const rootTasks = (ob.tasks ?? []).filter(t => !t.parent);
+      const planned = rootTasks.length;
+      const actual = rootTasks.filter(t => t.isCompleted).length;
+      const name = ob.user?.name?.split(' ')[0] ?? 'Unknown';
+      return { name, planned, actual };
+    });
+
+    // --- Job Distribution ---
+    // Count members per job title.
+    const jobCounts = new Map<string, number>();
+    for (const member of project.members ?? []) {
+      const title = member.job?.title ?? 'Other';
+      jobCounts.set(title, (jobCounts.get(title) ?? 0) + 1);
+    }
+    const distColors = ['#F87171', '#34D399', '#FBBF24', '#9CA3AF', '#60A5FA', '#A78BFA'];
+    const jobDistribution = [...jobCounts.entries()].map(
+      ([label, value], index) => ({
+        label,
+        value,
+        color: distColors[index % distColors.length]!,
+      })
+    );
+
+    return {
+      projectId: String(projectId),
+      avgOnboardDays,
+      slowestTasks,
+      overdueCount: overdueMembers.length,
+      overdueMembers: overdueMembers.slice(0, 5),
+      employeeProgress: employeeProgress.slice(0, 6),
+      jobDistribution,
+    };
   }
 }

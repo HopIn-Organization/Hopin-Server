@@ -9,6 +9,7 @@ const projectMemberController = new ProjectMemberController();
 
 router.get('/', projectController.getAllProjects);
 router.get('/:id', projectController.getProjectById);
+router.get('/:id/statistics/detailed', projectController.getDetailedStatistics);
 router.post('/', projectController.createProject);
 router.put('/:id', requireProjectAdmin, projectController.updateProject);
 router.delete('/:id', requireProjectAdmin, projectController.deleteProject);

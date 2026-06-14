@@ -49,6 +49,13 @@ export class OnBoarding {
   @Column({ type: 'text', nullable: true, default: null })
   failureReason!: string | null;
 
+  @Column({
+    type: 'timestamp with time zone',
+    name: 'created_at',
+    default: () => 'NOW()',
+  })
+  createdAt!: Date;
+
   @OneToMany(() => Task, task => task.onboarding)
   tasks!: Task[];
 }
