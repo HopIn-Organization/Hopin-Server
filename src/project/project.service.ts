@@ -251,19 +251,45 @@ export class ProjectService {
         : 0;
 
     // --- Slowest Tasks ---
-    // Aggregate all root tasks across onboardings, find the ones with highest estimatedDays.
-    const taskDurations = new Map<string, number>();
+    // Measures actual time each task took: from previous task's completedAt (or onboarding createdAt for the first task)
+    // to this task's completedAt. Only considers completed tasks.
+    const taskActualDurations = new Map<string, number>(); // title → max days taken
     for (const ob of onboardings) {
-      for (const task of ob.tasks ?? []) {
-        if (task.parent) continue; // skip subtasks
-        const current = taskDurations.get(task.title) ?? 0;
-        taskDurations.set(
-          task.title,
-          Math.max(current, task.estimatedDays ?? 0)
-        );
+      const rootTasks = (ob.tasks ?? [])
+        .filter(t => !t.parent)
+        .sort((a, b) => a.order - b.order);
+
+      for (let i = 0; i < rootTasks.length; i++) {
+        const task = rootTasks[i]!;
+        if (!task.isCompleted || !task.completedAt) continue;
+
+        const completedAt = new Date(task.completedAt);
+        let startedAt: Date;
+
+        if (i === 0) {
+          // First task: started when onboarding was created
+          startedAt = ob.createdAt ? new Date(ob.createdAt) : completedAt;
+        } else {
+          // Subsequent tasks: started when previous task was completed
+          const prevTask = rootTasks[i - 1]!;
+          startedAt = prevTask.completedAt
+            ? new Date(prevTask.completedAt)
+            : ob.createdAt
+              ? new Date(ob.createdAt)
+              : completedAt;
+        }
+
+        const durationDays =
+          (completedAt.getTime() - startedAt.getTime()) / (1000 * 60 * 60 * 24);
+
+        if (durationDays > 0) {
+          const current = taskActualDurations.get(task.title) ?? 0;
+          taskActualDurations.set(task.title, Math.max(current, durationDays));
+        }
       }
     }
-    const sortedTasks = [...taskDurations.entries()]
+
+    const sortedTasks = [...taskActualDurations.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3);
     const maxDuration = sortedTasks.length > 0 ? sortedTasks[0]![1] : 1;
@@ -271,7 +297,10 @@ export class ProjectService {
     const taskColors = ['#F87171', '#FBBF24', '#34D399'];
     const slowestTasks = sortedTasks.map(([name, days], index) => ({
       name,
-      duration: days >= 1 ? `${Math.round(days)} day${Math.round(days) !== 1 ? 's' : ''}` : `${Math.round(days * 24)} hours`,
+      duration:
+        days >= 1
+          ? `${Math.round(days)} day${Math.round(days) !== 1 ? 's' : ''}`
+          : `${Math.round(days * 24)} hours`,
       percentage: Math.round((days / maxDuration) * 100),
       color: taskColors[index] ?? '#9CA3AF',
     }));

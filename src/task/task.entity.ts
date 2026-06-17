@@ -33,6 +33,14 @@ export class Task {
   isCompleted!: boolean;
 
   @Column({
+    type: 'timestamp with time zone',
+    name: 'completed_at',
+    nullable: true,
+    default: null,
+  })
+  completedAt!: Date | null;
+
+  @Column({
     type: 'text',
     array: true,
     name: 'links',
