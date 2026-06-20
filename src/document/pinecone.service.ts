@@ -70,15 +70,13 @@ export class PineconeService {
         },
       }));
 
-      // Batch upserts at UPSERT_BATCH_SIZE records per call
       for (let i = 0; i < records.length; i += UPSERT_BATCH_SIZE) {
         const batch = records.slice(i, i + UPSERT_BATCH_SIZE);
         await namespace.upsert({ records: batch });
       }
 
-      console.log(
-        `[Pinecone] Upserted ${records.length} vectors for project ${projectId}`
-      );
+      console.log(`[Pinecone] Upserted 
+        ${records.length} vectors for project ${projectId}`);
     } catch (error) {
       console.error('[Pinecone] Failed to upsert chunks:', error);
       // Do not rethrow — Pinecone failure must not crash extraction
@@ -134,9 +132,8 @@ export class PineconeService {
     try {
       const namespace = this.index.namespace(this.getNamespace(projectId));
       await namespace.deleteMany({ ids: vectorIds });
-      console.log(
-        `[Pinecone] Deleted ${vectorIds.length} vectors for project ${projectId}`
-      );
+      console.log(`[Pinecone] Deleted
+         ${vectorIds.length} vectors for project ${projectId}`);
     } catch (error) {
       console.error('[Pinecone] Failed to delete chunks:', error);
     }

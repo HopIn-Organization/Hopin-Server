@@ -70,6 +70,7 @@ const toUsageDetails = (
   if (!usage) {
     return undefined;
   }
+
   return {
     ...(usage.input !== undefined ? { input: usage.input } : {}),
     ...(usage.output !== undefined ? { output: usage.output } : {}),
@@ -94,6 +95,7 @@ const getParentSpanContext = async (
   if (!traceId) {
     return undefined;
   }
+
   return {
     traceId: isTraceId(traceId)
       ? traceId.toLowerCase()

@@ -6,7 +6,8 @@ export const initializeDatabase = async () => {
     console.log('Database connected successfully');
   } catch (error) {
     console.error('Error during database initialization:', error);
-    process.exit(1);
+
+    throw error;
   }
 };
 

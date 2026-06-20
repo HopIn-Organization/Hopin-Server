@@ -198,13 +198,7 @@ export class DocumentService {
         jobId,
         topK
       );
-      console.log(
-        `[Pinecone] Query returned ${results.length} result(s) for project=${projectId} job=${jobId}`
-      );
       if (results.length > 0) {
-        results.forEach((r, i) =>
-          console.log(`  [${i + 1}] score=${r.score.toFixed(4)} file="${r.sourceFileName}"`)
-        );
         return results.map(r => ({
           text: r.text,
           score: r.score,

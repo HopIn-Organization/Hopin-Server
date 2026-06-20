@@ -50,20 +50,12 @@ export class S3Service {
   }
 
   async delete(key: string): Promise<void> {
-    try {
-      await s3.send(
-        new DeleteObjectCommand({
-          Bucket: BUCKET,
-          Key: key,
-        })
-      );
-    } catch (error: any) {
-      if (error?.Code === 'NoSuchKey' || error?.name === 'NoSuchKey') {
-        console.warn(`[S3] Object not found during delete (already removed?): ${key}`);
-        return;
-      }
-      throw error;
-    }
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+      })
+    );
   }
 
   async getSignedDownloadUrl(
