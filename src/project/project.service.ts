@@ -187,7 +187,9 @@ export class ProjectService {
 
     // Delete S3 documents and Pinecone vectors first
     const documents = await this.documentRepository.findAllByProjectId(id);
-    console.log(`[deleteProject] Found ${documents.length} document(s) to clean up`);
+    console.log(
+      `[deleteProject] Found ${documents.length} document(s) to clean up`
+    );
     for (const doc of documents) {
       await this.s3Service.delete(doc.s3Key);
 
@@ -237,54 +239,44 @@ export class ProjectService {
     const onboardings =
       await this.onboardingRepository.getOnboardingsByProjectId(projectId);
 
-    // --- Avg Onboard Days ---
-    // Sum estimatedDays across all root tasks for each onboarding, then average.
-    const onboardDays = onboardings.map(ob => {
-      const rootTasks = (ob.tasks ?? []).filter(t => !t.parent);
-      return rootTasks.reduce((sum, t) => sum + (t.estimatedDays ?? 0), 0);
-    });
-    const avgOnboardDays =
-      onboardDays.length > 0
-        ? Math.round(
-          onboardDays.reduce((a, b) => a + b, 0) / onboardDays.length
-        )
-        : 0;
-
     // --- Avg Onboard Days By Job ---
-    // Group onboardings by job title, compute average estimated days per job
     const jobAvgMap = new Map<string, number[]>();
     for (const ob of onboardings) {
       const jobTitle = ob.job?.title ?? 'Other';
       const rootTasks = (ob.tasks ?? []).filter(t => !t.parent);
-      const allCompleted = rootTasks.length > 0 && rootTasks.every(t => t.isCompleted);
+      const allCompleted =
+        rootTasks.length > 0 && rootTasks.every(t => t.isCompleted);
 
-      // Only count completed onboardings for actual duration
       if (!allCompleted) continue;
 
       const startDate = ob.createdAt ? new Date(ob.createdAt) : null;
       if (!startDate) continue;
 
-      // Find the last completed task date as the end of onboarding
       const completionDates = rootTasks
-        .map(t => t.completedAt ? new Date(t.completedAt) : null)
+        .map(t => (t.completedAt ? new Date(t.completedAt) : null))
         .filter((d): d is Date => d !== null);
 
       if (completionDates.length === 0) continue;
 
-      const lastCompleted = new Date(Math.max(...completionDates.map(d => d.getTime())));
-      const actualDays = Math.ceil((lastCompleted.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const lastCompleted = new Date(
+        Math.max(...completionDates.map(d => d.getTime()))
+      );
+      const actualDays = Math.ceil(
+        (lastCompleted.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
 
       if (!jobAvgMap.has(jobTitle)) jobAvgMap.set(jobTitle, []);
       jobAvgMap.get(jobTitle)!.push(actualDays);
     }
 
-    const avgOnboardDaysByJob = [...jobAvgMap.entries()].map(([jobTitle, days]) => ({
-      jobTitle,
-      avgDays: Math.round(days.reduce((a, b) => a + b, 0) / days.length),
-    }));
+    const avgOnboardDaysByJob = [...jobAvgMap.entries()].map(
+      ([jobTitle, days]) => ({
+        jobTitle,
+        avgDays: Math.round(days.reduce((a, b) => a + b, 0) / days.length),
+      })
+    );
 
     // --- Overdue Members ---
-    // A member is "overdue" if elapsed calendar days > total estimatedDays and tasks are incomplete.
     const overdueMembers: Array<{ initials: string; label: string }> = [];
     const now = new Date();
     for (const ob of onboardings) {
@@ -322,7 +314,6 @@ export class ProjectService {
     }
 
     // --- Employee Progress ---
-    // For each trainee onboarding, show planned vs actual completed tasks.
     const employeeProgress = onboardings.map(ob => {
       const rootTasks = (ob.tasks ?? []).filter(t => !t.parent);
       const planned = rootTasks.length;
@@ -332,13 +323,19 @@ export class ProjectService {
     });
 
     // --- Job Distribution ---
-    // Count members per job title.
     const jobCounts = new Map<string, number>();
     for (const member of project.members ?? []) {
       const title = member.job?.title ?? 'Other';
       jobCounts.set(title, (jobCounts.get(title) ?? 0) + 1);
     }
-    const distColors = ['#F87171', '#34D399', '#FBBF24', '#9CA3AF', '#60A5FA', '#A78BFA'];
+    const distColors = [
+      '#F87171',
+      '#34D399',
+      '#FBBF24',
+      '#9CA3AF',
+      '#60A5FA',
+      '#A78BFA',
+    ];
     const jobDistribution = [...jobCounts.entries()].map(
       ([label, value], index) => ({
         label,
@@ -349,7 +346,6 @@ export class ProjectService {
 
     return {
       projectId: String(projectId),
-      avgOnboardDays,
       avgOnboardDaysByJob,
       overdueCount: overdueMembers.length,
       overdueMembers,
