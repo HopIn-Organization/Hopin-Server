@@ -38,7 +38,10 @@ export class TaskRepository {
   }
 
   async completeTask(taskId: number): Promise<Task | null> {
-    await this.taskRepository.update(taskId, { isCompleted: true });
+    await this.taskRepository.update(taskId, {
+      isCompleted: true,
+      completedAt: new Date(),
+    });
     return this.taskRepository.findOne({
       where: { id: taskId },
       relations: { subtasks: true },

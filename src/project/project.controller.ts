@@ -84,4 +84,19 @@ export class ProjectController {
       }
     }
   };
+
+  getDetailedStatistics = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id as string);
+      const statistics = await this.projectService.getDetailedStatistics(id);
+      res.json(statistics);
+    } catch (error: any) {
+      if (error.message === 'Project not found') {
+        res.status(404).json({ message: 'Project not found' });
+      } else {
+        console.error('[getDetailedStatistics] Error:', error?.message, error?.stack);
+        res.status(500).json({ message: 'Error fetching statistics' });
+      }
+    }
+  };
 }
