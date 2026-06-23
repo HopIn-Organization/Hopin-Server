@@ -246,63 +246,41 @@ export class ProjectService {
     const avgOnboardDays =
       onboardDays.length > 0
         ? Math.round(
-            onboardDays.reduce((a, b) => a + b, 0) / onboardDays.length
-          )
+          onboardDays.reduce((a, b) => a + b, 0) / onboardDays.length
+        )
         : 0;
 
-    // --- Slowest Tasks ---
-    // Measures actual time each task took: from previous task's completedAt (or onboarding createdAt for the first task)
-    // to this task's completedAt. Only considers completed tasks.
-    const taskActualDurations = new Map<string, number>(); // title → max days taken
+    // --- Avg Onboard Days By Job ---
+    // Group onboardings by job title, compute average estimated days per job
+    const jobAvgMap = new Map<string, number[]>();
     for (const ob of onboardings) {
-      const rootTasks = (ob.tasks ?? [])
-        .filter(t => !t.parent)
-        .sort((a, b) => a.order - b.order);
+      const jobTitle = ob.job?.title ?? 'Other';
+      const rootTasks = (ob.tasks ?? []).filter(t => !t.parent);
+      const allCompleted = rootTasks.length > 0 && rootTasks.every(t => t.isCompleted);
 
-      for (let i = 0; i < rootTasks.length; i++) {
-        const task = rootTasks[i]!;
-        if (!task.isCompleted || !task.completedAt) continue;
+      // Only count completed onboardings for actual duration
+      if (!allCompleted) continue;
 
-        const completedAt = new Date(task.completedAt);
-        let startedAt: Date;
+      const startDate = ob.createdAt ? new Date(ob.createdAt) : null;
+      if (!startDate) continue;
 
-        if (i === 0) {
-          // First task: started when onboarding was created
-          startedAt = ob.createdAt ? new Date(ob.createdAt) : completedAt;
-        } else {
-          // Subsequent tasks: started when previous task was completed
-          const prevTask = rootTasks[i - 1]!;
-          startedAt = prevTask.completedAt
-            ? new Date(prevTask.completedAt)
-            : ob.createdAt
-              ? new Date(ob.createdAt)
-              : completedAt;
-        }
+      // Find the last completed task date as the end of onboarding
+      const completionDates = rootTasks
+        .map(t => t.completedAt ? new Date(t.completedAt) : null)
+        .filter((d): d is Date => d !== null);
 
-        const durationDays =
-          (completedAt.getTime() - startedAt.getTime()) / (1000 * 60 * 60 * 24);
+      if (completionDates.length === 0) continue;
 
-        if (durationDays > 0) {
-          const current = taskActualDurations.get(task.title) ?? 0;
-          taskActualDurations.set(task.title, Math.max(current, durationDays));
-        }
-      }
+      const lastCompleted = new Date(Math.max(...completionDates.map(d => d.getTime())));
+      const actualDays = Math.ceil((lastCompleted.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (!jobAvgMap.has(jobTitle)) jobAvgMap.set(jobTitle, []);
+      jobAvgMap.get(jobTitle)!.push(actualDays);
     }
 
-    const sortedTasks = [...taskActualDurations.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3);
-    const maxDuration = sortedTasks.length > 0 ? sortedTasks[0]![1] : 1;
-
-    const taskColors = ['#F87171', '#FBBF24', '#34D399'];
-    const slowestTasks = sortedTasks.map(([name, days], index) => ({
-      name,
-      duration:
-        days >= 1
-          ? `${Math.round(days)} day${Math.round(days) !== 1 ? 's' : ''}`
-          : `${Math.round(days * 24)} hours`,
-      percentage: Math.round((days / maxDuration) * 100),
-      color: taskColors[index] ?? '#9CA3AF',
+    const avgOnboardDaysByJob = [...jobAvgMap.entries()].map(([jobTitle, days]) => ({
+      jobTitle,
+      avgDays: Math.round(days.reduce((a, b) => a + b, 0) / days.length),
     }));
 
     // --- Overdue Members ---
@@ -372,10 +350,10 @@ export class ProjectService {
     return {
       projectId: String(projectId),
       avgOnboardDays,
-      slowestTasks,
+      avgOnboardDaysByJob,
       overdueCount: overdueMembers.length,
-      overdueMembers: overdueMembers.slice(0, 5),
-      employeeProgress: employeeProgress.slice(0, 6),
+      overdueMembers,
+      employeeProgress,
       jobDistribution,
     };
   }
