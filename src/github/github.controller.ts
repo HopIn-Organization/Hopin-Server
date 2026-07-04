@@ -49,7 +49,7 @@ export class GithubController {
       const existingInstallationId = await this.githubService.isAlreadyInstalled('', owner, repo);
       if (existingInstallationId) {
         const repoInfo = await this.githubService.getRepoInfo(existingInstallationId, owner, repo);
-        await this.connectionRepo.upsertByProjectId(projectId, {
+        const connection = await this.connectionRepo.upsertByProjectId(projectId, {
           installationId: existingInstallationId,
           repoOwner: owner,
           repoName: repo,
@@ -59,6 +59,10 @@ export class GithubController {
           syncStatus: SyncStatus.PENDING,
           lastError: null,
         });
+
+        this.syncService.runSync(connection).catch(err =>
+          console.error(`[GitHub] Unhandled error in runSync for project ${projectId}:`, err)
+        );
 
         res.json({ alreadyConnected: true });
         return;
@@ -137,7 +141,7 @@ export class GithubController {
         return;
       }
 
-      await this.connectionRepo.upsertByProjectId(projectId, {
+      const connection = await this.connectionRepo.upsertByProjectId(projectId, {
         installationId: installation_id,
         repoOwner,
         repoName,
@@ -147,6 +151,10 @@ export class GithubController {
         syncStatus: SyncStatus.PENDING,
         lastError: null,
       });
+
+      this.syncService.runSync(connection).catch(err =>
+        console.error(`[GitHub] Unhandled error in runSync for project ${projectId}:`, err)
+      );
 
       res.redirect(`${settingsUrl}?github=connected`);
     } catch (error) {

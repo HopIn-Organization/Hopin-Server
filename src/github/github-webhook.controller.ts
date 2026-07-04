@@ -75,7 +75,12 @@ export class GithubWebhookController {
           const connection =
             await this.connectionRepo.findByInstallationId(installationId);
 
-          if (connection && connection.syncStatus !== SyncStatus.REVOKED) {
+          const pushedRef: string = payload.ref ?? '';
+          const isDefaultBranch =
+            connection != null &&
+            pushedRef === `refs/heads/${connection.defaultBranch}`;
+
+          if (connection && connection.syncStatus !== SyncStatus.REVOKED && isDefaultBranch) {
             this.syncService.runSync(connection).catch(err =>
               console.error(
                 `[GitHub Webhook] Sync failed for installation ${installationId}:`,
