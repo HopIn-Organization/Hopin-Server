@@ -1,6 +1,7 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Job } from '../job/job.entity';
 import { ProjectMember } from '../projectMember/projectMember.entity';
+import { GithubConnection } from '../github/github-connection.entity';
 
 @Entity({ name: 'projects' })
 export class Project {
@@ -18,4 +19,7 @@ export class Project {
 
   @OneToMany(() => ProjectMember, membership => membership.project)
   members!: ProjectMember[];
+
+  @OneToOne(() => GithubConnection, githubConnection => githubConnection.project, { nullable: true, eager: false })
+  githubConnection!: GithubConnection | null;
 }

@@ -9,6 +9,16 @@ Company Onboarding Guidelines:
 - Employees are encouraged to ask questions early and often — the team values open communication.
 `.trim();
 
+export interface RepoKnowledgeSummary {
+  architectureOverview: string;
+  keyLibraries: Array<{ name: string; purpose: string; whereUsed: string[] }>;
+  moduleBreakdown: Array<{ path: string; purpose: string; dependsOn: string[] }>;
+  suggestedReadingOrder: string[];
+  techStack: { language: string; framework: string; database: string; other: string[] };
+  commitSha: string;
+  generatedAt: string;
+}
+
 export interface OnboardingPromptInput {
   onboardingId: number;
   userName: string;
@@ -20,6 +30,7 @@ export interface OnboardingPromptInput {
   projectDescription: string | null;
   documents: string[];
   daysDuration: number;
+  repoKnowledge?: RepoKnowledgeSummary | null;
 }
 
 export function buildOnboardingPrompt(input: OnboardingPromptInput): string {
@@ -34,6 +45,7 @@ export function buildOnboardingPrompt(input: OnboardingPromptInput): string {
     projectDescription,
     documents,
     daysDuration,
+    repoKnowledge,
   } = input;
 
   const experienceLabel =
@@ -58,6 +70,26 @@ export function buildOnboardingPrompt(input: OnboardingPromptInput): string {
           .map((doc, i) => `--- Document ${i + 1} ---\n${doc}`)
           .join('\n\n')
       : `--- Default Company Guidelines ---\n${DEFAULT_COMPANY_DOCUMENT}`;
+
+  const repoSection = repoKnowledge
+    ? `
+## Repository Code Analysis (auto-generated from the connected GitHub repo at commit ${repoKnowledge.commitSha.slice(0, 7)})
+Use this section to make tasks specific to the actual codebase — reference real modules, libraries, and reading order.
+
+**Architecture:** ${repoKnowledge.architectureOverview}
+
+**Tech stack:** ${repoKnowledge.techStack.language}, ${repoKnowledge.techStack.framework}, ${repoKnowledge.techStack.database}${repoKnowledge.techStack.other.length ? ', ' + repoKnowledge.techStack.other.join(', ') : ''}
+
+**Key libraries:**
+${repoKnowledge.keyLibraries.map(l => `- ${l.name}: ${l.purpose}`).join('\n')}
+
+**Module breakdown:**
+${repoKnowledge.moduleBreakdown.map(m => `- ${m.path}: ${m.purpose}`).join('\n')}
+
+**Suggested reading order for a new developer:**
+${repoKnowledge.suggestedReadingOrder.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+`.trim()
+    : '';
 
   return `
 You are an expert onboarding manager for a software company. Your job is to create a personalized, sequenced onboarding task board for a new employee.
@@ -84,6 +116,8 @@ Use all the information provided below to generate a realistic, practical, and t
 The following documents contain important context about the company, the project, and onboarding expectations. Use them to ground your tasks in real, relevant content.
 
 ${documentSection}
+
+${repoSection}
 
 ## Onboarding Duration
 - Total available days: ${daysDuration}

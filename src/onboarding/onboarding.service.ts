@@ -11,6 +11,9 @@ import { OnBoarding } from './onBoarding.entity';
 import { OnboardingRepository } from './onBoarding.repository';
 import { DocumentService } from '../document/document.service';
 import { DocumentEmbeddingService } from '../document/document-embedding.service';
+import { GithubConnectionRepository } from '../github/github-connection.repository';
+import { S3Service } from '../document/s3.service';
+import type { RepoKnowledgeSummary } from '../prompts/onboarding.prompt';
 
 export interface GenerateOnboardingInput {
   userId: number;
@@ -164,6 +167,23 @@ export class OnboardingService {
         ragDocuments = input.documents ?? [];
       }
 
+      // If the project has a synced GitHub connection, enrich with its repo knowledge summary.
+      // Falls back to doc-only behaviour if the connection is missing or the S3 object is unavailable.
+      let repoKnowledge: RepoKnowledgeSummary | null = null;
+      try {
+        const githubRepo = new GithubConnectionRepository();
+        const githubConn = await githubRepo.findSyncedByProjectId(job.project.id);
+        if (githubConn?.lastCommitSha) {
+          const s3Key = `projects/${job.project.id}/repo-knowledge/${githubConn.lastCommitSha}.json`;
+          const buffer = await new S3Service().getObjectBuffer(s3Key);
+          repoKnowledge = JSON.parse(buffer.toString('utf8')) as RepoKnowledgeSummary;
+        }
+      } catch {
+        console.warn(
+          `[Onboarding] Could not fetch repo knowledge for project ${job.project.id} — using doc-only`
+        );
+      }
+
       const prompt = buildOnboardingPrompt({
         onboardingId,
         userName: user.name,
@@ -175,6 +195,7 @@ export class OnboardingService {
         projectDescription: job.project.description,
         documents: ragDocuments,
         daysDuration,
+        repoKnowledge,
       });
 
       console.log(
