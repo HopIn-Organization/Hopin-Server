@@ -13,8 +13,12 @@ export interface RepoKnowledgeSummary {
   architectureOverview: string;
   keyLibraries: Array<{ name: string; purpose: string; whereUsed: string[] }>;
   moduleBreakdown: Array<{ path: string; purpose: string; dependsOn: string[] }>;
-  suggestedReadingOrder: string[];
+  suggestedReadingOrder: Array<{ path: string; description: string }>;
   techStack: { language: string; framework: string; database: string; other: string[] };
+  fileTree?: string;
+  readmeFile?: string | null;
+  repoOwner?: string;
+  repoName?: string;
   commitSha: string;
   generatedAt: string;
 }
@@ -72,23 +76,57 @@ export function buildOnboardingPrompt(input: OnboardingPromptInput): string {
       : `--- Default Company Guidelines ---\n${DEFAULT_COMPANY_DOCUMENT}`;
 
   const repoSection = repoKnowledge
-    ? `
-## Repository Code Analysis (auto-generated from the connected GitHub repo at commit ${repoKnowledge.commitSha.slice(0, 7)})
+    ? (() => {
+        const { repoOwner, repoName, commitSha } = repoKnowledge;
+        const canLink = repoOwner && repoName;
+
+        const ghLink = (filePath: string): string => {
+          if (!canLink) return '';
+          const clean = filePath.replace(/^\//, '').replace(/\/$/, '');
+          // Use /blob/ for files (have an extension), /tree/ for directories
+          const type = /\.[^/]+$/.test(clean) ? 'blob' : 'tree';
+          return ` — https://github.com/${repoOwner}/${repoName}/${type}/${commitSha}/${clean}`;
+        };
+
+        const readmeUrl =
+          canLink && repoKnowledge.readmeFile
+            ? `https://github.com/${repoOwner}/${repoName}/blob/${commitSha}/${repoKnowledge.readmeFile}`
+            : null;
+
+        const readingOrderLines = repoKnowledge.suggestedReadingOrder
+          .map((item, i) => `${i + 1}. ${item.path}${ghLink(item.path)} — ${item.description}`)
+          .join('\n');
+
+        const moduleLines = repoKnowledge.moduleBreakdown
+          .map(m => `- ${m.path}${ghLink(m.path)}: ${m.purpose}`)
+          .join('\n');
+
+        const fileTreeSection = repoKnowledge.fileTree
+          ? `\n**Full repository file tree:**\n\`\`\`\n${repoKnowledge.fileTree}\n\`\`\``
+          : '';
+
+        const ghFileUrlPattern = canLink
+          ? `https://github.com/${repoOwner}/${repoName}/blob/${commitSha}/{filePath}`
+          : null;
+
+        return `
+## Repository Code Analysis (auto-generated from the connected GitHub repo at commit ${commitSha.slice(0, 7)})
 Use this section to make tasks specific to the actual codebase — reference real modules, libraries, and reading order.
-
+${ghFileUrlPattern ? `\nWhen populating "links" for any task, you may construct direct GitHub file links using this pattern (replace {filePath} with the exact relative path from the file tree below):\n${ghFileUrlPattern}` : ''}
 **Architecture:** ${repoKnowledge.architectureOverview}
-
+${readmeUrl ? `\n**README:** ${readmeUrl}` : ''}
 **Tech stack:** ${repoKnowledge.techStack.language}, ${repoKnowledge.techStack.framework}, ${repoKnowledge.techStack.database}${repoKnowledge.techStack.other.length ? ', ' + repoKnowledge.techStack.other.join(', ') : ''}
 
 **Key libraries:**
 ${repoKnowledge.keyLibraries.map(l => `- ${l.name}: ${l.purpose}`).join('\n')}
 
 **Module breakdown:**
-${repoKnowledge.moduleBreakdown.map(m => `- ${m.path}: ${m.purpose}`).join('\n')}
+${moduleLines}
 
 **Suggested reading order for a new developer:**
-${repoKnowledge.suggestedReadingOrder.map((s, i) => `${i + 1}. ${s}`).join('\n')}
-`.trim()
+${readingOrderLines}
+${fileTreeSection}`.trim();
+      })()
     : '';
 
   return `
@@ -133,7 +171,10 @@ Rules:
 - The sum of all top-level task estimatedDays MUST equal exactly ${daysDuration} days — distribute the full duration across the tasks
 - Aim for 6 to 12 tasks total; adjust estimatedDays per task so they add up to ${daysDuration}
 - No single task should exceed half the total duration (${Math.ceil(daysDuration / 2)} days)
-- For each task, include a "links" field: an array of URLs pointing to relevant official documentation (e.g., MDN, official framework docs, GitHub READMEs). Only populate it when the task clearly involves a specific technology that has well-known public docs. If no such documentation applies, set "links" to []. Never invent or guess URLs.
+- For each task, include a "links" field — an array that may contain two kinds of URLs:
+  1. GitHub file links: when the task relates to a specific file or module in the codebase, construct a direct link using the GitHub file URL pattern provided in the Repository Code Analysis section above. Only use file paths that appear verbatim in the provided file tree — never invent paths. For example, if the task is about understanding the LLM integration, link the relevant service file from the tree. If a README is present, include its link in the first task or any task about understanding the project.
+  2. Official documentation links: when the task involves a well-known technology (e.g., TypeScript, Express, React), include links to its official docs (MDN, official framework site, etc.) only when you are certain the URL exists.
+  If neither type applies, set "links" to [].
 - Each top-level task must include 2 to 4 subtasks. Subtasks must be concrete, actionable steps that directly break down the parent task.
 - The sum of all subtask estimatedDays must equal the parent task's estimatedDays.
 - Subtasks must NOT include an onboardingId field. They are linked to their parent task, not directly to the onboarding.

@@ -13,6 +13,10 @@ const IGNORED_DIRS = new Set([
   '__pycache__', '.venv', 'vendor', 'coverage', '.turbo',
 ]);
 
+// README candidates checked in priority order
+const README_FILENAMES = ['README.md', 'readme.md', 'README.rst', 'README.txt', 'README'];
+
+// Priority-ordered key files included before the rest of the root scan
 const KEY_FILENAMES = [
   'index.ts', 'main.ts', 'app.ts', 'server.ts',
   'index.js', 'main.js', 'app.js',
@@ -20,16 +24,25 @@ const KEY_FILENAMES = [
   'docker-compose.yml', 'Dockerfile', '.env.example',
 ];
 
+
+const MAX_README_CHARS = 12000;
 const MAX_FILE_CHARS = 6000;
-const MAX_KEY_FILES = 8;
-const TREE_DEPTH = 2;
+const MAX_ROOT_FILES = 15; // key files + remaining root files, excluding README
+const TREE_DEPTH = 5;
 
 export interface RepoKnowledgeSummary {
   architectureOverview: string;
   keyLibraries: Array<{ name: string; purpose: string; whereUsed: string[] }>;
   moduleBreakdown: Array<{ path: string; purpose: string; dependsOn: string[] }>;
-  suggestedReadingOrder: string[];
+  /** Each entry has the actual relative file path and a short description of what to learn from it. */
+  suggestedReadingOrder: Array<{ path: string; description: string }>;
   techStack: { language: string; framework: string; database: string; other: string[] };
+  /** Full directory tree (up to TREE_DEPTH levels, build artefacts excluded). */
+  fileTree: string;
+  /** Filename of the README found at root (e.g. "README.md"), or null if none. */
+  readmeFile: string | null;
+  repoOwner: string;
+  repoName: string;
   commitSha: string;
   generatedAt: string;
 }
@@ -79,7 +92,7 @@ export class GithubSyncService {
           return;
         }
 
-        const summary = await this.extractKnowledge(tmpDir, headSha);
+        const summary = await this.extractKnowledge(tmpDir, headSha, connection.repoOwner, connection.repoName);
 
         const s3Key = `projects/${connection.project_id}/repo-knowledge/${headSha}.json`;
         await this.s3Service.upload(
@@ -111,7 +124,9 @@ export class GithubSyncService {
 
   private async extractKnowledge(
     repoDir: string,
-    commitSha: string
+    commitSha: string,
+    repoOwner: string,
+    repoName: string
   ): Promise<RepoKnowledgeSummary> {
     const pkgPath = path.join(repoDir, 'package.json');
     const packageJson = fs.existsSync(pkgPath)
@@ -119,13 +134,22 @@ export class GithubSyncService {
       : null;
 
     const tree = this.buildFileTree(repoDir, TREE_DEPTH);
-    const keyFiles = this.readKeyFiles(repoDir);
+    const readme = this.readReadme(repoDir);
+    const rootFiles = this.readKeyFiles(repoDir);
 
-    const prompt = this.buildExtractionPrompt({ packageJson, tree, keyFiles });
+    const prompt = this.buildExtractionPrompt({ packageJson, tree, rootFiles, readme });
     const raw = await this.llmService.generateJson(prompt);
 
-    const summary = raw as Omit<RepoKnowledgeSummary, 'commitSha' | 'generatedAt'>;
-    return { ...summary, commitSha, generatedAt: new Date().toISOString() };
+    const summary = raw as Omit<RepoKnowledgeSummary, 'commitSha' | 'generatedAt' | 'fileTree' | 'readmeFile' | 'repoOwner' | 'repoName'>;
+    return {
+      ...summary,
+      commitSha,
+      generatedAt: new Date().toISOString(),
+      fileTree: tree,
+      readmeFile: readme?.path ?? null,
+      repoOwner,
+      repoName,
+    };
   }
 
   private buildFileTree(dir: string, maxDepth: number, depth = 0): string {
@@ -163,10 +187,22 @@ export class GithubSyncService {
     }
   }
 
+  /** Returns the first README found at repo root, or null. */
+  private readReadme(repoDir: string): { path: string; content: string } | null {
+    for (const name of README_FILENAMES) {
+      const fullPath = path.join(repoDir, name);
+      if (fs.existsSync(fullPath)) {
+        const content = fs.readFileSync(fullPath, 'utf8').slice(0, MAX_README_CHARS);
+        return { path: name, content };
+      }
+    }
+    return null;
+  }
+
   private readKeyFiles(repoDir: string): Array<{ path: string; content: string }> {
     const results: Array<{ path: string; content: string }> = [];
     for (const name of KEY_FILENAMES) {
-      if (results.length >= MAX_KEY_FILES) break;
+      if (results.length >= MAX_ROOT_FILES) break;
       const fullPath = path.join(repoDir, name);
       if (fs.existsSync(fullPath)) {
         const content = fs.readFileSync(fullPath, 'utf8').slice(0, MAX_FILE_CHARS);
@@ -179,11 +215,16 @@ export class GithubSyncService {
   private buildExtractionPrompt(input: {
     packageJson: string | null;
     tree: string;
-    keyFiles: Array<{ path: string; content: string }>;
+    rootFiles: Array<{ path: string; content: string }>;
+    readme: { path: string; content: string } | null;
   }): string {
+    const readmeSection = input.readme
+      ? `README (${input.readme.path}) — primary project documentation, weight this most heavily:\n${input.readme.content}`
+      : '';
+
     const filesSection =
-      input.keyFiles.length > 0
-        ? input.keyFiles
+      input.rootFiles.length > 0
+        ? input.rootFiles
             .map(f => `--- ${f.path} ---\n${f.content}`)
             .join('\n\n')
         : 'No key files found at root level.';
@@ -192,6 +233,8 @@ export class GithubSyncService {
 
 Repository file structure (${TREE_DEPTH} levels deep):
 ${input.tree}
+
+${readmeSection}
 
 ${input.packageJson ? `package.json:\n${input.packageJson}` : ''}
 
@@ -205,9 +248,11 @@ Produce a JSON object with exactly this structure. Output ONLY valid JSON — no
     { "name": "string", "purpose": "string", "whereUsed": ["string"] }
   ],
   "moduleBreakdown": [
-    { "path": "string", "purpose": "string", "dependsOn": ["string"] }
+    { "path": "string (relative directory or file path, e.g. src/api)", "purpose": "string", "dependsOn": ["string"] }
   ],
-  "suggestedReadingOrder": ["string — path or topic a new developer should understand first"],
+  "suggestedReadingOrder": [
+    { "path": "relative/file/path.ext (actual file that exists in the repo)", "description": "why a new developer should read this file and what to learn from it" }
+  ],
   "techStack": {
     "language": "string",
     "framework": "string",
