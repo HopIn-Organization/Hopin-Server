@@ -16,19 +16,14 @@ const IGNORED_DIRS = new Set([
 // README candidates checked in priority order
 const README_FILENAMES = ['README.md', 'readme.md', 'README.rst', 'README.txt', 'README'];
 
-// Priority-ordered key files included before the rest of the root scan
-const KEY_FILENAMES = [
-  'index.ts', 'main.ts', 'app.ts', 'server.ts',
-  'index.js', 'main.js', 'app.js',
-  'tsconfig.json', 'vite.config.ts', 'webpack.config.js',
-  'docker-compose.yml', 'Dockerfile', '.env.example',
-];
-
-
 const MAX_README_CHARS = 12000;
 const MAX_FILE_CHARS = 6000;
-const MAX_ROOT_FILES = 15; // key files + remaining root files, excluding README
 const TREE_DEPTH = 5;
+
+// LLM-driven file selection: initial pick, then "need more?" refinement rounds
+const MAX_INITIAL_FILES = 8;
+const MAX_ADDITIONAL_FILES = 4;
+const MAX_REFINEMENT_ROUNDS = 2;
 
 export interface RepoKnowledgeSummary {
   architectureOverview: string;
@@ -41,6 +36,8 @@ export interface RepoKnowledgeSummary {
   fileTree: string;
   /** Filename of the README found at root (e.g. "README.md"), or null if none. */
   readmeFile: string | null;
+  /** Relative paths of the files the LLM selected and read to build this summary. */
+  analyzedFiles: string[];
   repoOwner: string;
   repoName: string;
   commitSha: string;
@@ -135,21 +132,103 @@ export class GithubSyncService {
 
     const tree = this.buildFileTree(repoDir, TREE_DEPTH);
     const readme = this.readReadme(repoDir);
-    const rootFiles = this.readKeyFiles(repoDir);
+    const files = await this.selectImportantFiles(repoDir, { packageJson, tree, readme });
 
-    const prompt = this.buildExtractionPrompt({ packageJson, tree, rootFiles, readme });
+    const prompt = this.buildExtractionPrompt({ packageJson, tree, files, readme });
     const raw = await this.llmService.generateJson(prompt);
 
-    const summary = raw as Omit<RepoKnowledgeSummary, 'commitSha' | 'generatedAt' | 'fileTree' | 'readmeFile' | 'repoOwner' | 'repoName'>;
+    const summary = raw as Omit<RepoKnowledgeSummary, 'commitSha' | 'generatedAt' | 'fileTree' | 'readmeFile' | 'analyzedFiles' | 'repoOwner' | 'repoName'>;
     return {
       ...summary,
       commitSha,
       generatedAt: new Date().toISOString(),
       fileTree: tree,
       readmeFile: readme?.path ?? null,
+      analyzedFiles: files.map(f => f.path),
       repoOwner,
       repoName,
     };
+  }
+
+  /**
+   * Asks the LLM which files matter most for the summary (max MAX_INITIAL_FILES),
+   * reads them, then runs up to MAX_REFINEMENT_ROUNDS "is this enough?" rounds where
+   * the LLM may request up to MAX_ADDITIONAL_FILES more files each time.
+   */
+  private async selectImportantFiles(
+    repoDir: string,
+    ctx: {
+      packageJson: string | null;
+      tree: string;
+      readme: { path: string; content: string } | null;
+    }
+  ): Promise<Array<{ path: string; content: string }>> {
+    const files: Array<{ path: string; content: string }> = [];
+    const seen = new Set<string>();
+
+    const initialRaw = await this.llmService.generateJson(
+      this.buildFileSelectionPrompt(ctx)
+    );
+    const requested = this.extractRequestedPaths(initialRaw);
+    console.log(`[GitHub Sync] LLM initial file selection: ${requested.join(', ') || '(none)'}`);
+    files.push(...this.readRequestedFiles(repoDir, requested, MAX_INITIAL_FILES, seen));
+
+    for (let round = 1; round <= MAX_REFINEMENT_ROUNDS; round++) {
+      const raw = await this.llmService.generateJson(
+        this.buildRefinementPrompt(ctx, files)
+      );
+      const res = (raw ?? {}) as { enough?: unknown; files?: unknown };
+      if (res.enough === true) {
+        console.log(`[GitHub Sync] LLM confirmed context is sufficient after round ${round}`);
+        break;
+      }
+
+      const more = this.extractRequestedPaths(raw);
+      console.log(`[GitHub Sync] LLM refinement round ${round} requested: ${more.join(', ') || '(none)'}`);
+      const added = this.readRequestedFiles(repoDir, more, MAX_ADDITIONAL_FILES, seen);
+      if (added.length === 0) break; // nothing new to read — stop iterating
+      files.push(...added);
+    }
+
+    return files;
+  }
+
+  /** Pulls a string[] of file paths out of an LLM JSON response, tolerating malformed shapes. */
+  private extractRequestedPaths(raw: unknown): string[] {
+    const value = (raw as { files?: unknown } | null)?.files;
+    return Array.isArray(value) ? value.filter((p): p is string => typeof p === 'string') : [];
+  }
+
+  /** Reads requested paths (up to `limit`), skipping duplicates, missing files, and paths outside the repo. */
+  private readRequestedFiles(
+    repoDir: string,
+    requested: string[],
+    limit: number,
+    seen: Set<string>
+  ): Array<{ path: string; content: string }> {
+    const repoRoot = path.resolve(repoDir);
+    const results: Array<{ path: string; content: string }> = [];
+
+    for (const rawPath of requested) {
+      if (results.length >= limit) break;
+      const rel = rawPath.replace(/\\/g, '/').replace(/^\.?\//, '').trim();
+      if (!rel || seen.has(rel)) continue;
+
+      const fullPath = path.resolve(repoRoot, rel);
+      if (fullPath !== repoRoot && !fullPath.startsWith(repoRoot + path.sep)) {
+        console.warn(`[GitHub Sync] LLM requested path outside repo, skipping: ${rawPath}`);
+        continue;
+      }
+      if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+        console.warn(`[GitHub Sync] LLM requested non-existent file, skipping: ${rel}`);
+        continue;
+      }
+
+      seen.add(rel);
+      results.push({ path: rel, content: fs.readFileSync(fullPath, 'utf8').slice(0, MAX_FILE_CHARS) });
+    }
+
+    return results;
   }
 
   private buildFileTree(dir: string, maxDepth: number, depth = 0): string {
@@ -199,23 +278,75 @@ export class GithubSyncService {
     return null;
   }
 
-  private readKeyFiles(repoDir: string): Array<{ path: string; content: string }> {
-    const results: Array<{ path: string; content: string }> = [];
-    for (const name of KEY_FILENAMES) {
-      if (results.length >= MAX_ROOT_FILES) break;
-      const fullPath = path.join(repoDir, name);
-      if (fs.existsSync(fullPath)) {
-        const content = fs.readFileSync(fullPath, 'utf8').slice(0, MAX_FILE_CHARS);
-        results.push({ path: name, content });
-      }
-    }
-    return results;
+  /** Shared context header (tree + README + package.json) used by the selection prompts. */
+  private buildRepoContextSection(ctx: {
+    packageJson: string | null;
+    tree: string;
+    readme: { path: string; content: string } | null;
+  }): string {
+    return [
+      `Repository file structure (${TREE_DEPTH} levels deep):\n${ctx.tree}`,
+      ctx.readme ? `README (${ctx.readme.path}):\n${ctx.readme.content}` : '',
+      ctx.packageJson ? `package.json:\n${ctx.packageJson}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+  }
+
+  private buildFileSelectionPrompt(ctx: {
+    packageJson: string | null;
+    tree: string;
+    readme: { path: string; content: string } | null;
+  }): string {
+    return `You are a senior software architect preparing to write a structured onboarding knowledge summary of a code repository.
+
+${this.buildRepoContextSection(ctx)}
+
+Based on the file tree, README and package.json above, choose the files whose contents are most important to read in order to understand the architecture, key libraries, module structure, and tech stack of this project.
+
+Rules:
+- Select at most ${MAX_INITIAL_FILES} files.
+- Only use relative file paths that appear verbatim in the file tree above — never invent paths.
+- Prefer entry points, core services/modules, configuration, and routing/wiring files over tests or assets.
+
+Output ONLY valid JSON — no markdown fences, no explanation:
+{ "files": ["relative/path/to/file.ext"] }`.trim();
+  }
+
+  private buildRefinementPrompt(
+    ctx: {
+      packageJson: string | null;
+      tree: string;
+      readme: { path: string; content: string } | null;
+    },
+    filesRead: Array<{ path: string; content: string }>
+  ): string {
+    const filesSection = filesRead.length > 0
+      ? filesRead.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')
+      : 'No files read yet.';
+
+    return `You are a senior software architect preparing to write a structured onboarding knowledge summary of a code repository (architecture overview, key libraries, module breakdown, suggested reading order, tech stack).
+
+${this.buildRepoContextSection(ctx)}
+
+Files already read:
+${filesSection}
+
+Decide whether the files read so far give you enough context to produce an accurate summary. If not, request the additional files you still need.
+
+Rules:
+- If the context is sufficient, respond with { "enough": true, "files": [] }.
+- If not, respond with { "enough": false, "files": [...] } listing at most ${MAX_ADDITIONAL_FILES} additional files.
+- Only use relative file paths that appear verbatim in the file tree above — never invent paths, and never repeat files already read.
+
+Output ONLY valid JSON — no markdown fences, no explanation:
+{ "enough": boolean, "files": ["relative/path/to/file.ext"] }`.trim();
   }
 
   private buildExtractionPrompt(input: {
     packageJson: string | null;
     tree: string;
-    rootFiles: Array<{ path: string; content: string }>;
+    files: Array<{ path: string; content: string }>;
     readme: { path: string; content: string } | null;
   }): string {
     const readmeSection = input.readme
@@ -223,11 +354,11 @@ export class GithubSyncService {
       : '';
 
     const filesSection =
-      input.rootFiles.length > 0
-        ? input.rootFiles
+      input.files.length > 0
+        ? input.files
             .map(f => `--- ${f.path} ---\n${f.content}`)
             .join('\n\n')
-        : 'No key files found at root level.';
+        : 'No key files were read.';
 
     return `You are a senior software architect analyzing a code repository to produce a structured onboarding knowledge summary.
 

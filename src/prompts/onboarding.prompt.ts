@@ -17,6 +17,8 @@ export interface RepoKnowledgeSummary {
   techStack: { language: string; framework: string; database: string; other: string[] };
   fileTree?: string;
   readmeFile?: string | null;
+  /** Relative paths of the files the LLM read when building this summary. */
+  analyzedFiles?: string[];
   repoOwner?: string;
   repoName?: string;
   commitSha: string;
@@ -101,6 +103,13 @@ export function buildOnboardingPrompt(input: OnboardingPromptInput): string {
           .map(m => `- ${m.path}${ghLink(m.path)}: ${m.purpose}`)
           .join('\n');
 
+        const analyzedFilesSection =
+          repoKnowledge.analyzedFiles && repoKnowledge.analyzedFiles.length > 0
+            ? `\n**Files analyzed to build this summary (good candidates for task links):**\n${repoKnowledge.analyzedFiles
+                .map(p => `- ${p}${ghLink(p)}`)
+                .join('\n')}`
+            : '';
+
         const fileTreeSection = repoKnowledge.fileTree
           ? `\n**Full repository file tree:**\n\`\`\`\n${repoKnowledge.fileTree}\n\`\`\``
           : '';
@@ -125,6 +134,7 @@ ${moduleLines}
 
 **Suggested reading order for a new developer:**
 ${readingOrderLines}
+${analyzedFilesSection}
 ${fileTreeSection}`.trim();
       })()
     : '';
