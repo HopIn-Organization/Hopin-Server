@@ -46,14 +46,34 @@ export class GithubController {
       const owner = repoOwner.trim();
       const repo = repoName.trim();
 
+      // Cheap duplicate pre-check by owner/name — the repoId-keyed check below
+      // (and the callback upsert) stay authoritative.
+      const projectConnections = await this.connectionRepo.findAllByProjectId(projectId);
+      const duplicate = projectConnections.find(
+        c =>
+          c.repoOwner.toLowerCase() === owner.toLowerCase() &&
+          c.repoName.toLowerCase() === repo.toLowerCase() &&
+          c.syncStatus !== SyncStatus.REVOKED
+      );
+      if (duplicate) {
+        res.status(409).json({ error: 'This repository is already connected to the project' });
+        return;
+      }
+
       const existingInstallationId = await this.githubService.isAlreadyInstalled('', owner, repo);
       if (existingInstallationId) {
         const repoInfo = await this.githubService.getRepoInfo(existingInstallationId, owner, repo);
-        const connection = await this.connectionRepo.upsertByProjectId(projectId, {
+
+        const existing = await this.connectionRepo.findByProjectAndRepoId(projectId, repoInfo.repoId);
+        if (existing && existing.syncStatus !== SyncStatus.REVOKED) {
+          res.status(409).json({ error: 'This repository is already connected to the project' });
+          return;
+        }
+
+        const connection = await this.connectionRepo.upsertByProjectAndRepo(projectId, repoInfo.repoId, {
           installationId: existingInstallationId,
           repoOwner: owner,
           repoName: repo,
-          repoId: repoInfo.repoId,
           isPrivate: repoInfo.isPrivate,
           defaultBranch: repoInfo.defaultBranch,
           syncStatus: SyncStatus.PENDING,
@@ -141,11 +161,10 @@ export class GithubController {
         return;
       }
 
-      const connection = await this.connectionRepo.upsertByProjectId(projectId, {
+      const connection = await this.connectionRepo.upsertByProjectAndRepo(projectId, repoInfo.repoId, {
         installationId: installation_id,
         repoOwner,
         repoName,
-        repoId: repoInfo.repoId,
         isPrivate: repoInfo.isPrivate,
         defaultBranch: repoInfo.defaultBranch,
         syncStatus: SyncStatus.PENDING,
@@ -163,13 +182,20 @@ export class GithubController {
   };
 
   /**
-   * POST /projects/:id/github/sync
-   * Triggers a manual sync. Returns 202 immediately; sync runs in background.
+   * POST /projects/:id/github/:connectionId/sync
+   * Triggers a manual sync of one connection. Returns 202 immediately; sync runs in background.
    */
   sync = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const projectId = parseInt(req.params.id as string, 10);
-      const connection = await this.connectionRepo.findByProjectId(projectId);
+      const connectionId = parseInt(req.params.connectionId as string, 10);
+
+      if (Number.isNaN(connectionId)) {
+        res.status(400).json({ error: 'Invalid connection id' });
+        return;
+      }
+
+      const connection = await this.connectionRepo.findByIdForProject(projectId, connectionId);
 
       if (!connection) {
         res.status(404).json({ error: 'No GitHub connection found for this project' });
@@ -195,43 +221,55 @@ export class GithubController {
   };
 
   /**
-   * GET /projects/:id/github/status
+   * GET /projects/:id/github
+   * Lists all GitHub connections of the project. Always 200 with an array.
    */
-  status = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const projectId = parseInt(req.params.id as string, 10);
-      const connection = await this.connectionRepo.findByProjectId(projectId);
+      const connections = await this.connectionRepo.findAllByProjectId(projectId);
 
-      if (!connection) {
-        res.status(404).json({ error: 'No GitHub connection found for this project' });
-        return;
-      }
-
-      res.json({
-        syncStatus: connection.syncStatus,
-        repoOwner: connection.repoOwner,
-        repoName: connection.repoName,
-        isPrivate: connection.isPrivate,
-        defaultBranch: connection.defaultBranch,
-        lastSyncedAt: connection.lastSyncedAt,
-        lastCommitSha: connection.lastCommitSha,
-        lastError: connection.lastError,
-        connectedAt: connection.connectedAt,
-      });
+      res.json(
+        connections.map(connection => ({
+          id: connection.id,
+          syncStatus: connection.syncStatus,
+          repoOwner: connection.repoOwner,
+          repoName: connection.repoName,
+          isPrivate: connection.isPrivate,
+          defaultBranch: connection.defaultBranch,
+          lastSyncedAt: connection.lastSyncedAt,
+          lastCommitSha: connection.lastCommitSha,
+          lastError: connection.lastError,
+          connectedAt: connection.connectedAt,
+        }))
+      );
     } catch (error) {
       next(error);
     }
   };
 
   /**
-   * DELETE /projects/:id/github
+   * DELETE /projects/:id/github/:connectionId
    * Removes the DB record. Does NOT uninstall the App on GitHub — the user
    * does that from their GitHub org/account settings.
    */
   disconnect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const projectId = parseInt(req.params.id as string, 10);
-      await this.connectionRepo.deleteByProjectId(projectId);
+      const connectionId = parseInt(req.params.connectionId as string, 10);
+
+      if (Number.isNaN(connectionId)) {
+        res.status(400).json({ error: 'Invalid connection id' });
+        return;
+      }
+
+      const connection = await this.connectionRepo.findByIdForProject(projectId, connectionId);
+      if (!connection) {
+        res.status(404).json({ error: 'No GitHub connection found for this project' });
+        return;
+      }
+
+      await this.connectionRepo.deleteById(connection.id);
       res.sendStatus(204);
     } catch (error) {
       next(error);

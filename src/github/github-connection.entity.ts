@@ -2,7 +2,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToOne,
+  ManyToOne,
   JoinColumn,
   RelationId,
   CreateDateColumn,
@@ -20,12 +20,12 @@ export enum SyncStatus {
 }
 
 @Entity({ name: 'github_connections' })
-@Index(['project'], { unique: true })
+@Index(['project', 'repoId'], { unique: true })
 export class GithubConnection {
   @PrimaryGeneratedColumn({ type: 'integer', name: 'id' })
   id!: number;
 
-  @OneToOne(() => Project, project => project.githubConnection, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Project, project => project.githubConnections, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'project_id' })
   project!: Project;
 

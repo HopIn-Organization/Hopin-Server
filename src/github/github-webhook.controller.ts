@@ -72,18 +72,25 @@ export class GithubWebhookController {
           : null;
 
         if (installationId) {
-          const connection =
+          // One installation can cover many connected repos (and the same repo
+          // may be connected to several projects) — match the pushed repo and
+          // sync every matching connection.
+          const connections =
             await this.connectionRepo.findByInstallationId(installationId);
 
+          const pushedRepoId = payload.repository?.id
+            ? String(payload.repository.id)
+            : null;
           const pushedRef: string = payload.ref ?? '';
-          const isDefaultBranch =
-            connection != null &&
-            pushedRef === `refs/heads/${connection.defaultBranch}`;
 
-          if (connection && connection.syncStatus !== SyncStatus.REVOKED && isDefaultBranch) {
+          for (const connection of connections) {
+            if (connection.syncStatus === SyncStatus.REVOKED) continue;
+            if (pushedRepoId !== connection.repoId) continue;
+            if (pushedRef !== `refs/heads/${connection.defaultBranch}`) continue;
+
             this.syncService.runSync(connection).catch(err =>
               console.error(
-                `[GitHub Webhook] Sync failed for installation ${installationId}:`,
+                `[GitHub Webhook] Sync failed for connection ${connection.id} (installation ${installationId}):`,
                 err
               )
             );

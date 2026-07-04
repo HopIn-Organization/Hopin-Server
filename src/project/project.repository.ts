@@ -37,7 +37,7 @@ export class ProjectRepository {
   async findById(id: number): Promise<Project | null> {
     return this.repository.findOne({
       where: { id },
-      relations: { jobs: { skills: true }, members: { user: true, job: true }, githubConnection: true },
+      relations: { jobs: { skills: true }, members: { user: true, job: true }, githubConnections: true },
       order: {
         members: { id: 'DESC' },
       },

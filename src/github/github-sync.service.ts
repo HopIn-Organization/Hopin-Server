@@ -83,15 +83,17 @@ export class GithubSyncService {
 
         const headSha = (await simpleGit(tmpDir).revparse(['HEAD'])).trim();
 
+        const repo = `${connection.repoOwner}/${connection.repoName}`;
+
         if (headSha === connection.lastCommitSha) {
           await this.connectionRepo.update(connection.id, { syncStatus: SyncStatus.SYNCED });
-          console.log(`[GitHub Sync] project ${connection.project_id}: no new commits, skipping`);
+          console.log(`[GitHub Sync] ${repo}: no new commits since ${headSha.slice(0, 7)}, skipping`);
           return;
         }
 
         const summary = await this.extractKnowledge(tmpDir, headSha, connection.repoOwner, connection.repoName);
 
-        const s3Key = `projects/${connection.project_id}/repo-knowledge/${headSha}.json`;
+        const s3Key = `projects/${connection.project_id}/repo-knowledge/${connection.id}/${headSha}.json`;
         await this.s3Service.upload(
           s3Key,
           Buffer.from(JSON.stringify(summary)),
@@ -105,13 +107,14 @@ export class GithubSyncService {
           lastError: null,
         });
 
-        console.log(`[GitHub Sync] project ${connection.project_id}: synced commit ${headSha}`);
+        console.log(`[GitHub Sync] ${repo}: synced commit ${headSha.slice(0, 7)}`);
       } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[GitHub Sync] project ${connection.project_id} failed:`, msg);
+      const repo = `${connection.repoOwner}/${connection.repoName}`;
+      console.error(`[GitHub Sync] ${repo}: sync failed —`, msg);
       await this.connectionRepo.update(connection.id, {
         syncStatus: SyncStatus.ERROR,
         lastError: msg,
@@ -132,10 +135,12 @@ export class GithubSyncService {
 
     const tree = this.buildFileTree(repoDir, TREE_DEPTH);
     const readme = this.readReadme(repoDir);
-    const files = await this.selectImportantFiles(repoDir, { packageJson, tree, readme });
+    const files = await this.selectImportantFiles(repoDir, { packageJson, tree, readme }, repoOwner, repoName);
 
     const prompt = this.buildExtractionPrompt({ packageJson, tree, files, readme });
+    console.log(`[GitHub Sync] ${repoOwner}/${repoName}: sending extraction prompt to LLM (${files.length} files, commit ${commitSha.slice(0, 7)})`);
     const raw = await this.llmService.generateJson(prompt);
+    console.log(`[GitHub Sync] ${repoOwner}/${repoName}: LLM extraction complete`);
 
     const summary = raw as Omit<RepoKnowledgeSummary, 'commitSha' | 'generatedAt' | 'fileTree' | 'readmeFile' | 'analyzedFiles' | 'repoOwner' | 'repoName'>;
     return {
@@ -161,30 +166,35 @@ export class GithubSyncService {
       packageJson: string | null;
       tree: string;
       readme: { path: string; content: string } | null;
-    }
+    },
+    repoOwner: string,
+    repoName: string
   ): Promise<Array<{ path: string; content: string }>> {
+    const repo = `${repoOwner}/${repoName}`;
     const files: Array<{ path: string; content: string }> = [];
     const seen = new Set<string>();
 
+    console.log(`[GitHub Sync] ${repo}: sending file-selection prompt to LLM`);
     const initialRaw = await this.llmService.generateJson(
       this.buildFileSelectionPrompt(ctx)
     );
     const requested = this.extractRequestedPaths(initialRaw);
-    console.log(`[GitHub Sync] LLM initial file selection: ${requested.join(', ') || '(none)'}`);
+    console.log(`[GitHub Sync] ${repo}: LLM initial file selection: ${requested.join(', ') || '(none)'}`);
     files.push(...this.readRequestedFiles(repoDir, requested, MAX_INITIAL_FILES, seen));
 
     for (let round = 1; round <= MAX_REFINEMENT_ROUNDS; round++) {
+      console.log(`[GitHub Sync] ${repo}: sending refinement prompt to LLM (round ${round}, ${files.length} files so far)`);
       const raw = await this.llmService.generateJson(
         this.buildRefinementPrompt(ctx, files)
       );
       const res = (raw ?? {}) as { enough?: unknown; files?: unknown };
       if (res.enough === true) {
-        console.log(`[GitHub Sync] LLM confirmed context is sufficient after round ${round}`);
+        console.log(`[GitHub Sync] ${repo}: LLM confirmed context sufficient after round ${round}`);
         break;
       }
 
       const more = this.extractRequestedPaths(raw);
-      console.log(`[GitHub Sync] LLM refinement round ${round} requested: ${more.join(', ') || '(none)'}`);
+      console.log(`[GitHub Sync] ${repo}: LLM refinement round ${round} requested: ${more.join(', ') || '(none)'}`);
       const added = this.readRequestedFiles(repoDir, more, MAX_ADDITIONAL_FILES, seen);
       if (added.length === 0) break; // nothing new to read — stop iterating
       files.push(...added);

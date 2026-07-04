@@ -6,30 +6,53 @@ export class GithubConnectionRepository {
     return AppDataSource.getRepository(GithubConnection);
   }
 
-  async findByProjectId(projectId: number): Promise<GithubConnection | null> {
-    return this.repo.findOne({ where: { project: { id: projectId } } });
-  }
-
-  async findSyncedByProjectId(projectId: number): Promise<GithubConnection | null> {
-    return this.repo.findOne({
-      where: { project: { id: projectId }, syncStatus: SyncStatus.SYNCED },
+  async findAllByProjectId(projectId: number): Promise<GithubConnection[]> {
+    return this.repo.find({
+      where: { project: { id: projectId } },
+      order: { id: 'ASC' },
     });
   }
 
-  async findByInstallationId(installationId: string): Promise<GithubConnection | null> {
-    return this.repo.findOne({ where: { installationId } });
+  async findSyncedByProjectId(projectId: number): Promise<GithubConnection[]> {
+    return this.repo.find({
+      where: { project: { id: projectId }, syncStatus: SyncStatus.SYNCED },
+      order: { id: 'ASC' },
+    });
   }
 
-  async upsertByProjectId(
+  async findByInstallationId(installationId: string): Promise<GithubConnection[]> {
+    return this.repo.find({ where: { installationId } });
+  }
+
+  async findByIdForProject(
     projectId: number,
+    connectionId: number
+  ): Promise<GithubConnection | null> {
+    return this.repo.findOne({
+      where: { id: connectionId, project: { id: projectId } },
+    });
+  }
+
+  async findByProjectAndRepoId(
+    projectId: number,
+    repoId: string
+  ): Promise<GithubConnection | null> {
+    return this.repo.findOne({
+      where: { project: { id: projectId }, repoId },
+    });
+  }
+
+  async upsertByProjectAndRepo(
+    projectId: number,
+    repoId: string,
     data: Partial<Omit<GithubConnection, 'id' | 'project' | 'project_id' | 'connectedAt' | 'updatedAt'>>
   ): Promise<GithubConnection> {
-    const existing = await this.findByProjectId(projectId);
+    const existing = await this.findByProjectAndRepoId(projectId, repoId);
     if (existing) {
-      this.repo.merge(existing, data);
+      this.repo.merge(existing, { ...data, repoId });
       return this.repo.save(existing);
     }
-    const conn = this.repo.create({ ...data, project: { id: projectId } as any });
+    const conn = this.repo.create({ ...data, repoId, project: { id: projectId } as any });
     return this.repo.save(conn);
   }
 
@@ -41,7 +64,7 @@ export class GithubConnectionRepository {
     await this.repo.update({ installationId }, { syncStatus: SyncStatus.REVOKED });
   }
 
-  async deleteByProjectId(projectId: number): Promise<void> {
-    await this.repo.delete({ project: { id: projectId } });
+  async deleteById(id: number): Promise<void> {
+    await this.repo.delete({ id });
   }
 }

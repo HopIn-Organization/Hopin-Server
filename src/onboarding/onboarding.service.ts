@@ -167,21 +167,24 @@ export class OnboardingService {
         ragDocuments = input.documents ?? [];
       }
 
-      // If the project has a synced GitHub connection, enrich with its repo knowledge summary.
-      // Falls back to doc-only behaviour if the connection is missing or the S3 object is unavailable.
-      let repoKnowledge: RepoKnowledgeSummary | null = null;
-      try {
-        const githubRepo = new GithubConnectionRepository();
-        const githubConn = await githubRepo.findSyncedByProjectId(job.project.id);
-        if (githubConn?.lastCommitSha) {
-          const s3Key = `projects/${job.project.id}/repo-knowledge/${githubConn.lastCommitSha}.json`;
-          const buffer = await new S3Service().getObjectBuffer(s3Key);
-          repoKnowledge = JSON.parse(buffer.toString('utf8')) as RepoKnowledgeSummary;
+      // Enrich with the repo knowledge summaries of every synced GitHub connection.
+      // A connection whose S3 object is missing is skipped without blocking the others;
+      // an empty array falls back to doc-only behaviour.
+      const repoKnowledge: RepoKnowledgeSummary[] = [];
+      const githubRepo = new GithubConnectionRepository();
+      const s3Service = new S3Service();
+      const syncedConnections = await githubRepo.findSyncedByProjectId(job.project.id);
+      for (const conn of syncedConnections) {
+        if (!conn.lastCommitSha) continue;
+        try {
+          const s3Key = `projects/${job.project.id}/repo-knowledge/${conn.id}/${conn.lastCommitSha}.json`;
+          const buffer = await s3Service.getObjectBuffer(s3Key);
+          repoKnowledge.push(JSON.parse(buffer.toString('utf8')) as RepoKnowledgeSummary);
+        } catch {
+          console.warn(
+            `[Onboarding] Could not fetch repo knowledge for connection ${conn.id} (project ${job.project.id}) — skipping`
+          );
         }
-      } catch {
-        console.warn(
-          `[Onboarding] Could not fetch repo knowledge for project ${job.project.id} — using doc-only`
-        );
       }
 
       const prompt = buildOnboardingPrompt({
@@ -199,7 +202,7 @@ export class OnboardingService {
       });
 
       console.log(
-        `[Onboarding] Sending prompt to LLM for onboarding id=${onboardingId}`
+        `[Onboarding] Sending prompt to LLM | onboarding=${onboardingId} job="${job.title}" project="${job.project.name}" repos=${repoKnowledge.length} docs=${ragDocuments.length}`
       );
       const tasks = await this.llmService.generateOnboardingTasks(prompt, {
         trace: input.trace,
@@ -208,7 +211,7 @@ export class OnboardingService {
       });
 
       console.log(
-        `[Onboarding] LLM returned ${tasks?.length} tasks for onboarding id=${onboardingId}`
+        `[Onboarding] LLM returned ${tasks?.length ?? 0} tasks | onboarding=${onboardingId} job="${job.title}" project="${job.project.name}"`
       );
 
       const onboardingEntity = { id: onboardingId } as OnBoarding;
