@@ -15,24 +15,45 @@ export class GithubController {
     this.syncService = new GithubSyncService();
   }
 
-  private getSettingsUrl(projectId: number): string {
-    const clientOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
-    return `${clientOrigin}/projects/${projectId}/settings`;
+  private get clientOrigin(): string {
+    return process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
+  }
+
+  /**
+   * Builds a redirect back to the client's dedicated GitHub connections page.
+   * `from` (e.g. "create") is preserved so the page keeps its flow context
+   * across the round-trip to GitHub.
+   */
+  private buildClientRedirect(
+    projectId: number,
+    params: Record<string, string>,
+    from?: string
+  ): string {
+    const url = new URL(`${this.clientOrigin}/projects/${projectId}/github`);
+    if (from) url.searchParams.set('from', from);
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+    return url.toString();
   }
 
   /**
    * POST /projects/:id/github/connect
-   * Body: { repoOwner: string, repoName: string }
+   * Body: { repoOwner: string, repoName: string, from?: "create" }
    * Returns the GitHub App install URL. Frontend redirects the user there.
    */
   connect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-   
+
     try {
       const projectId = parseInt(req.params.id as string, 10);
-      const { repoOwner, repoName } = req.body as {
+      const { repoOwner, repoName, from: rawFrom } = req.body as {
         repoOwner?: string;
         repoName?: string;
+        from?: string;
       };
+      // Whitelist the flow marker — it round-trips through GitHub and back
+      // into a client redirect, so never echo arbitrary input.
+      const from = rawFrom === 'create' ? rawFrom : undefined;
 
       if (!repoOwner || typeof repoOwner !== 'string') {
         res.status(400).json({ error: 'repoOwner is required' });
@@ -88,7 +109,7 @@ export class GithubController {
         return;
       }
 
-      const installUrl = this.githubService.buildInstallUrl(projectId, owner, repo);
+      const installUrl = this.githubService.buildInstallUrl(projectId, owner, repo, from);
       res.json({ installUrl });
     } catch (error) {
       next(error);
@@ -110,7 +131,9 @@ export class GithubController {
       } = req.query as Record<string, string>;
 
       if (setup_action === 'delete') {
-        res.status(200).json({ message: 'App uninstalled' });
+        // User uninstalled the App from GitHub's UI — nothing to connect,
+        // just land them back in the app instead of showing raw JSON.
+        res.redirect(`${this.clientOrigin}/projects`);
         return;
       }
 
@@ -119,7 +142,7 @@ export class GithubController {
         return;
       }
 
-      let decoded: { projectId: number; repoOwner: string; repoName: string };
+      let decoded: { projectId: number; repoOwner: string; repoName: string; from?: string };
       try {
         decoded = this.githubService.decodeState(state);
       } catch {
@@ -127,9 +150,7 @@ export class GithubController {
         return;
       }
 
-      const { projectId, repoOwner, repoName } = decoded;
-
-      const settingsUrl = this.getSettingsUrl(projectId);
+      const { projectId, repoOwner, repoName, from } = decoded;
 
       const confirmedInstallationId = await this.githubService.isAlreadyInstalled(
         '',
@@ -138,7 +159,7 @@ export class GithubController {
       );
       if (!confirmedInstallationId) {
         const reason = `The GitHub App is not installed on ${repoOwner}/${repoName}. Please install it and grant access to this repository.`;
-        res.redirect(`${settingsUrl}?github=error&reason=${encodeURIComponent(reason)}`);
+        res.redirect(this.buildClientRedirect(projectId, { github: 'error', reason }, from));
         return;
       }
 
@@ -157,7 +178,7 @@ export class GithubController {
             : status === 403
             ? `No permission to access ${repoOwner}/${repoName}. Grant the app access to this repository on GitHub.`
             : `Could not reach ${repoOwner}/${repoName}. Please try again.`;
-        res.redirect(`${settingsUrl}?github=error&reason=${encodeURIComponent(reason)}`);
+        res.redirect(this.buildClientRedirect(projectId, { github: 'error', reason }, from));
         return;
       }
 
@@ -175,7 +196,7 @@ export class GithubController {
         console.error(`[GitHub] Unhandled error in runSync for project ${projectId}:`, err)
       );
 
-      res.redirect(`${settingsUrl}?github=connected`);
+      res.redirect(this.buildClientRedirect(projectId, { github: 'connected' }, from));
     } catch (error) {
       next(error);
     }

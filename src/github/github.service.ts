@@ -5,6 +5,8 @@ interface InstallState {
   projectId: number;
   repoOwner: string;
   repoName: string;
+  /** Where the user started the connect flow ("create" = post-creation step). */
+  from?: string;
 }
 
 export interface RepoInfo {
@@ -55,9 +57,9 @@ export class GithubService {
   }
 
   /** URL the user visits to install the App and pick which repos to grant access to. */
-  buildInstallUrl(projectId: number, repoOwner: string, repoName: string): string {
+  buildInstallUrl(projectId: number, repoOwner: string, repoName: string, from?: string): string {
     const state = Buffer.from(
-      JSON.stringify({ projectId, repoOwner, repoName } satisfies InstallState)
+      JSON.stringify({ projectId, repoOwner, repoName, ...(from && { from }) } satisfies InstallState)
     ).toString('base64');
     // redirect_uri overrides the default Setup URL in GitHub App settings so we
     // always land on the exact callback endpoint we control, regardless of what
