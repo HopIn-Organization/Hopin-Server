@@ -1,11 +1,14 @@
 import { NextFunction, Request, Response } from 'express';
 import { OnboardingService } from './onboarding.service';
+import { S3Service } from '../document/s3.service';
 
 export class OnboardingController {
   private onboardingService: OnboardingService;
+  private s3Service: S3Service;
 
   constructor() {
     this.onboardingService = new OnboardingService();
+    this.s3Service = new S3Service();
   }
 
   generateOnboarding = async (
@@ -194,6 +197,58 @@ export class OnboardingController {
     } catch (error) {
       next(error);
       return;
+    }
+  };
+
+  // Streams the repo-knowledge summary JSON that was pulled from S3 to generate this
+  // onboarding, for the given connection. Only connections recorded in the onboarding's
+  // knowledgeMeta are downloadable (so the S3 key is reconstructed server-side).
+  downloadRepoKnowledge = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const onboardingId = parseInt(req.params.id as string, 10);
+      const connectionId = parseInt(req.params.connectionId as string, 10);
+
+      if (isNaN(onboardingId) || isNaN(connectionId)) {
+        res.status(400).json({
+          error: 'id and connectionId must be valid numbers',
+        });
+        return;
+      }
+
+      const onboarding =
+        await this.onboardingService.getOnBoardingById(onboardingId);
+
+      if (!onboarding) {
+        res.status(404).json({ error: 'Onboarding not found' });
+        return;
+      }
+
+      const repo = onboarding.knowledgeMeta?.repos.find(
+        r => r.connectionId === connectionId
+      );
+
+      if (!repo) {
+        res.status(404).json({
+          error: 'No repo knowledge summary was used for this connection',
+        });
+        return;
+      }
+
+      const s3Key = `projects/${onboarding.projectId}/repo-knowledge/${connectionId}/${repo.commitSha}.json`;
+      const buffer = await this.s3Service.getObjectBuffer(s3Key);
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${repo.repoOwner}-${repo.repoName}-repo-knowledge.json"`
+      );
+      res.status(200).send(buffer);
+    } catch (error) {
+      next(error);
     }
   };
 }

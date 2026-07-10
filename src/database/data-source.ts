@@ -11,6 +11,7 @@ import { OnBoarding } from '../onboarding/onBoarding.entity';
 import { Task } from '../task/task.entity';
 import { ProjectDocument } from '../document/document.entity';
 import { DocumentChunk } from '../document/document-chunk.entity';
+import { GithubConnection } from '../github/github-connection.entity';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ export const AppDataSource = new DataSource({
     Task,
     ProjectDocument,
     DocumentChunk,
+    GithubConnection,
   ],
   migrations: [path.join(__dirname, 'migrations', '*.{ts,js}')],
   subscribers: [path.join(__dirname, 'subscribers', '*.{ts,js}')],

@@ -11,7 +11,7 @@ import { User } from '../database/entities/user.entity';
 import { Task } from '../task/task.entity';
 import { Job } from '../job/job.entity';
 import { Project } from '../project/project.entity';
-import { OnboardingStatus } from './onboarding.types';
+import { OnboardingStatus, KnowledgeMeta } from './onboarding.types';
 
 @Entity({ name: 'onboarding' })
 export class OnBoarding {
@@ -48,6 +48,17 @@ export class OnBoarding {
 
   @Column({ type: 'text', nullable: true, default: null })
   failureReason!: string | null;
+
+  // Records the knowledge sources that fed this plan's generation (see KnowledgeMeta).
+  // Currently GitHub repo knowledge only, but may grow to cover documents, job skills, etc.
+  // Null for onboardings generated before this field existed.
+  @Column({
+    type: 'jsonb',
+    name: 'knowledge_meta',
+    nullable: true,
+    default: null,
+  })
+  knowledgeMeta!: KnowledgeMeta | null;
 
   @Column({
     type: 'timestamp with time zone',

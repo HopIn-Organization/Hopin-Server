@@ -120,6 +120,16 @@ const normalizeTask = (
 const MODEL_NAME = 'gemini-3-flash-preview';
 
 export class LLMService {
+  /** Generic JSON generation — returns the parsed value as-is. */
+  async generateJson(prompt: string): Promise<unknown> {
+    const model = this.genAI.getGenerativeModel({
+      model: MODEL_NAME,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const result = await model.generateContent(prompt);
+    return JSON.parse(result.response.text());
+  }
+
   private genAI: GoogleGenerativeAI;
 
   constructor() {

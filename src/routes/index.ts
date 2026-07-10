@@ -8,6 +8,8 @@ import projectRoutes from '../project/project.routes';
 import taskRoutes from '../task/task.routes';
 import profileRoutes from '../profile/profile.routes';
 import documentRoutes from '../document/document.routes';
+import githubRoutes from '../github/github.routes';
+import { githubController } from '../github/github.controller';
 
 const router = Router();
 
@@ -24,6 +26,9 @@ router.use('/users', authenticateAccessToken, userRoutes);
 router.use('/jobs', authenticateAccessToken, jobRoutes);
 router.use('/projects', authenticateAccessToken, projectRoutes);
 router.use('/projects', authenticateAccessToken, documentRoutes);
+router.use('/projects', authenticateAccessToken, githubRoutes);
+// Global GitHub App callback — no session auth (GitHub redirects here after install)
+router.get('/github/callback', githubController.callback);
 router.use('/onboarding', authenticateAccessToken, onboardingRoutes);
 router.use('/tasks', authenticateAccessToken, taskRoutes);
 router.use('/profile', authenticateAccessToken, profileRoutes);
