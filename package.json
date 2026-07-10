@@ -22,7 +22,7 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\"",
-    "dev:webhook": "smee --url $SMEE_CHANNEL_URL --target http://localhost:3000/api/webhooks/github"
+    "dev:webhook": "smee --url https://smee.io/UkMiIKn64DglGgs --target http://localhost:3000/webhooks/github"
   },
   "repository": {
     "type": "git",

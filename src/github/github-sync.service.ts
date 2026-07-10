@@ -23,7 +23,7 @@ const TREE_DEPTH = 5;
 // LLM-driven file selection: initial pick, then "need more?" refinement rounds
 const MAX_INITIAL_FILES = 8;
 const MAX_ADDITIONAL_FILES = 4;
-const MAX_REFINEMENT_ROUNDS = 2;
+const MAX_REFINEMENT_ROUNDS = 0;
 
 export interface RepoKnowledgeSummary {
   architectureOverview: string;
@@ -181,26 +181,37 @@ export class GithubSyncService {
     const requested = this.extractRequestedPaths(initialRaw);
     console.log(`[GitHub Sync] ${repo}: LLM initial file selection: ${requested.join(', ') || '(none)'}`);
     files.push(...this.readRequestedFiles(repoDir, requested, MAX_INITIAL_FILES, seen));
+    let errorInRefinement = undefined;
+    try {
 
-    for (let round = 1; round <= MAX_REFINEMENT_ROUNDS; round++) {
-      console.log(`[GitHub Sync] ${repo}: sending refinement prompt to LLM (round ${round}, ${files.length} files so far)`);
-      const raw = await this.llmService.generateJson(
-        this.buildRefinementPrompt(ctx, files)
-      );
-      const res = (raw ?? {}) as { enough?: unknown; files?: unknown };
-      if (res.enough === true) {
-        console.log(`[GitHub Sync] ${repo}: LLM confirmed context sufficient after round ${round}`);
-        break;
+      for (let round = 1; round <= MAX_REFINEMENT_ROUNDS; round++) {
+        console.log(`[GitHub Sync] ${repo}: sending refinement prompt to LLM (round ${round}, ${files.length} files so far)`);
+        const raw = await this.llmService.generateJson(
+          this.buildRefinementPrompt(ctx, files)
+        );
+        const res = (raw ?? {}) as { enough?: unknown; files?: unknown };
+        if (res.enough === true) {
+          console.log(`[GitHub Sync] ${repo}: LLM confirmed context sufficient after round ${round}`);
+          break;
+        }
+
+        const more = this.extractRequestedPaths(raw);
+        console.log(`[GitHub Sync] ${repo}: LLM refinement round ${round} requested: ${more.join(', ') || '(none)'}`);
+        const added = this.readRequestedFiles(repoDir, more, MAX_ADDITIONAL_FILES, seen);
+        if (added.length === 0) break; // nothing new to read — stop iterating
+        files.push(...added);
       }
+    } catch (error) {
+      errorInRefinement = error;
+      console.warn(`[GitHub Sync] ${repo}: LLM refinement failed (non-fatal)`);
+    } finally {
 
-      const more = this.extractRequestedPaths(raw);
-      console.log(`[GitHub Sync] ${repo}: LLM refinement round ${round} requested: ${more.join(', ') || '(none)'}`);
-      const added = this.readRequestedFiles(repoDir, more, MAX_ADDITIONAL_FILES, seen);
-      if (added.length === 0) break; // nothing new to read — stop iterating
-      files.push(...added);
-    }
-
-    return files;
+      if (files.length > 0) {
+      return files;
+    } else {
+      throw errorInRefinement ?? new Error('LLM did not select any files to read');
+  }
+}
   }
 
   /** Pulls a string[] of file paths out of an LLM JSON response, tolerating malformed shapes. */

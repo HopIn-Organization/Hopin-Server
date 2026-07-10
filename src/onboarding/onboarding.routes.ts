@@ -7,6 +7,10 @@ const router = Router();
 router.get('/:id/status', onboardingController.getOnboardingStatus);
 router.get('/user/:userId/job/:jobId', onboardingController.getOnboarding);
 router.get('/id/:id', onboardingController.getOnboardingById);
+router.get(
+  '/:id/repo-knowledge/:connectionId/download',
+  onboardingController.downloadRepoKnowledge
+);
 router.get('/project/:projectId', onboardingController.getOnboardingsByProject);
 router.post(
   '/generate',

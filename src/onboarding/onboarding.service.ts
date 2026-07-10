@@ -9,6 +9,7 @@ import { TaskService } from '../task/task.service';
 import type { LangfuseTrace } from '../utils/langfuse';
 import { OnBoarding } from './onBoarding.entity';
 import { OnboardingRepository } from './onBoarding.repository';
+import type { KnowledgeMeta } from './onboarding.types';
 import { DocumentService } from '../document/document.service';
 import { DocumentEmbeddingService } from '../document/document-embedding.service';
 import { GithubConnectionRepository } from '../github/github-connection.repository';
@@ -168,23 +169,54 @@ export class OnboardingService {
       }
 
       // Enrich with the repo knowledge summaries of every synced GitHub connection.
-      // A connection whose S3 object is missing is skipped without blocking the others;
-      // an empty array falls back to doc-only behaviour.
+      // The whole block is best-effort: NOTHING here (DB query, S3 read, JSON parse,
+      // unexpected throw) may fail generation — on any error we fall back to doc-only
+      // behaviour and record how the plan was ultimately sourced in `knowledgeMeta`.
       const repoKnowledge: RepoKnowledgeSummary[] = [];
-      const githubRepo = new GithubConnectionRepository();
-      const s3Service = new S3Service();
-      const syncedConnections = await githubRepo.findSyncedByProjectId(job.project.id);
-      for (const conn of syncedConnections) {
-        if (!conn.lastCommitSha) continue;
-        try {
-          const s3Key = `projects/${job.project.id}/repo-knowledge/${conn.id}/${conn.lastCommitSha}.json`;
-          const buffer = await s3Service.getObjectBuffer(s3Key);
-          repoKnowledge.push(JSON.parse(buffer.toString('utf8')) as RepoKnowledgeSummary);
-        } catch {
-          console.warn(
-            `[Onboarding] Could not fetch repo knowledge for connection ${conn.id} (project ${job.project.id}) — skipping`
-          );
+      let knowledgeMeta: KnowledgeMeta = { status: 'none', repos: [] };
+      try {
+        const githubRepo = new GithubConnectionRepository();
+        const s3Service = new S3Service();
+        const syncedConnections = await githubRepo.findSyncedByProjectId(
+          job.project.id
+        );
+        const usableConnections = syncedConnections.filter(
+          conn => conn.lastCommitSha
+        );
+
+        if (usableConnections.length === 0) {
+          knowledgeMeta = { status: 'none', repos: [] };
+        } else {
+          for (const conn of usableConnections) {
+            try {
+              const s3Key = `projects/${job.project.id}/repo-knowledge/${conn.id}/${conn.lastCommitSha}.json`;
+              const buffer = await s3Service.getObjectBuffer(s3Key);
+              repoKnowledge.push(
+                JSON.parse(buffer.toString('utf8')) as RepoKnowledgeSummary
+              );
+              knowledgeMeta.repos.push({
+                connectionId: conn.id,
+                repoOwner: conn.repoOwner,
+                repoName: conn.repoName,
+                repoUrl: `https://github.com/${conn.repoOwner}/${conn.repoName}`,
+                commitSha: conn.lastCommitSha!,
+              });
+            } catch {
+              console.warn(
+                `[Onboarding] Could not fetch repo knowledge for connection ${conn.id} (project ${job.project.id}) — skipping`
+              );
+            }
+          }
+          // Partial success still counts as 'used'; only fall back to 'error'
+          // when every read failed despite connections being available.
+          knowledgeMeta.status = knowledgeMeta.repos.length > 0 ? 'used' : 'error';
         }
+      } catch (err) {
+        console.warn(
+          `[Onboarding] Repo knowledge assembly failed for project ${job.project.id} — continuing doc-only`,
+          err
+        );
+        knowledgeMeta = { status: 'error', repos: [] };
       }
 
       const prompt = buildOnboardingPrompt({
@@ -248,9 +280,13 @@ export class OnboardingService {
         await this.taskService.createTasks(subtaskData);
       }
 
+      await this.onboardingRepository.setKnowledgeMeta(
+        onboardingId,
+        knowledgeMeta
+      );
       await this.onboardingRepository.updateStatus(onboardingId, 'ready');
       console.log(
-        `[Onboarding] Generation complete for onboarding id=${onboardingId}`
+        `[Onboarding] Generation complete for onboarding id=${onboardingId} | knowledge=${knowledgeMeta.status} repos=${knowledgeMeta.repos.length}`
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);

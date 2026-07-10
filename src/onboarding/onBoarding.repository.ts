@@ -1,7 +1,11 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../database/data-source';
 import { OnBoarding } from './onBoarding.entity';
-import { OnboardingStatus, OnboardingStatusResponse } from './onboarding.types';
+import {
+  OnboardingStatus,
+  OnboardingStatusResponse,
+  KnowledgeMeta,
+} from './onboarding.types';
 
 export class OnboardingRepository {
   private onboardingRepository: Repository<OnBoarding>;
@@ -65,6 +69,10 @@ export class OnboardingRepository {
       { id },
       { status, failureReason: failureReason ?? null }
     );
+  }
+
+  async setKnowledgeMeta(id: number, meta: KnowledgeMeta): Promise<void> {
+    await this.onboardingRepository.update({ id }, { knowledgeMeta: meta });
   }
 
   async getStatus(id: number): Promise<OnboardingStatusResponse | null> {

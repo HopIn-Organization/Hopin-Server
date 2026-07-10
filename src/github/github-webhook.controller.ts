@@ -20,6 +20,7 @@ export class GithubWebhookController {
       const sig = req.headers['x-hub-signature-256'] as string | undefined;
       const secret = process.env.GITHUB_WEBHOOK_SECRET;
 
+      console.log('[GitHub Webhook] Received event:', req.headers['x-github-event'], 'with signature:', sig);
       if (!secret) {
         console.error('[GitHub Webhook] GITHUB_WEBHOOK_SECRET is not set');
         res.status(500).json({ error: 'Webhook secret not configured' });

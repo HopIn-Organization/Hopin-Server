@@ -189,6 +189,7 @@ async function _seed(dataSource: DataSource): Promise<void> {
       job: jobs[0],
       project: projects[0],
       status: 'ready',
+      knowledgeMeta: { status: 'none', repos: [] },
     })
   );
 
