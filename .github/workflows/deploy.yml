@@ -1,0 +1,174 @@
+name: Deploy Server
+
+on:
+  push:
+    # `deployment` is a temporary trigger for testing the pipeline itself
+    # before relying on it for real main-branch releases. Remove it once
+    # you're confident and just deploy off `main`.
+    branches: [main, deployment]
+  workflow_dispatch: {}
+
+concurrency:
+  group: hopin-server-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, hopin-prod]
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build TypeScript (fail fast before touching prod)
+        run: npm run build
+
+      - name: Write production .env
+        # Assembled from individual repo/environment secrets & variables
+        # (Settings -> Secrets and variables -> Actions, "production"
+        # environment) rather than one blob secret, so editing a single
+        # value doesn't require re-pasting everything else. Values are
+        # passed in via `env:` (not inlined as ${{ }} in the script body)
+        # so a value containing shell metacharacters can't be executed —
+        # only substituted as plain text. Written into the workspace, which
+        # is already git-ignored and wiped on next checkout.
+        #
+        # GitHub App vars are named GH_* here (GitHub rejects secret/variable
+        # names starting with GITHUB_) and remapped to their real GITHUB_APP_*
+        # env var names below.
+        env:
+          PORT: ${{ vars.PORT }}
+          DB_HOST: ${{ vars.DB_HOST }}
+          DB_PORT: ${{ vars.DB_PORT }}
+          DB_USERNAME: ${{ vars.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_SYNCHRONIZE: ${{ vars.DB_SYNCHRONIZE }}
+          DB_LOGGING: ${{ vars.DB_LOGGING }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          JWT_ACCESS_EXPIRES_IN: ${{ vars.JWT_ACCESS_EXPIRES_IN }}
+          JWT_REFRESH_EXPIRES_IN: ${{ vars.JWT_REFRESH_EXPIRES_IN }}
+          REFRESH_TOKEN_TTL_DAYS: ${{ vars.REFRESH_TOKEN_TTL_DAYS }}
+          LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
+          LANGFUSE_PUBLIC_KEY: ${{ vars.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_ENABLED: ${{ vars.LANGFUSE_ENABLED }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_BUCKET_NAME: ${{ vars.S3_BUCKET_NAME }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_FORCE_PATH_STYLE: ${{ vars.S3_FORCE_PATH_STYLE }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ vars.PINECONE_INDEX_NAME }}
+          GH_APP_ID: ${{ vars.GH_APP_ID }}
+          GH_APP_SLUG: ${{ vars.GH_APP_SLUG }}
+          GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          GH_WEBHOOK_SECRET: ${{ secrets.GH_WEBHOOK_SECRET }}
+          GH_APP_CALLBACK_URL: ${{ vars.GH_APP_CALLBACK_URL }}
+          CLIENT_ORIGIN: ${{ vars.CLIENT_ORIGIN }}
+        run: |
+          cat > .env <<ENVEOF
+          PORT=$PORT
+          DB_HOST=$DB_HOST
+          DB_PORT=$DB_PORT
+          DB_USERNAME=$DB_USERNAME
+          DB_PASSWORD=$DB_PASSWORD
+          DB_NAME=$DB_NAME
+          DB_SYNCHRONIZE=$DB_SYNCHRONIZE
+          DB_LOGGING=$DB_LOGGING
+          JWT_ACCESS_SECRET=$JWT_ACCESS_SECRET
+          JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET
+          JWT_ACCESS_EXPIRES_IN=$JWT_ACCESS_EXPIRES_IN
+          JWT_REFRESH_EXPIRES_IN=$JWT_REFRESH_EXPIRES_IN
+          REFRESH_TOKEN_TTL_DAYS=$REFRESH_TOKEN_TTL_DAYS
+          LANGFUSE_HOST=$LANGFUSE_HOST
+          LANGFUSE_PUBLIC_KEY=$LANGFUSE_PUBLIC_KEY
+          LANGFUSE_SECRET_KEY=$LANGFUSE_SECRET_KEY
+          LANGFUSE_ENABLED=$LANGFUSE_ENABLED
+          AWS_REGION=$AWS_REGION
+          AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+          AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+          S3_BUCKET_NAME=$S3_BUCKET_NAME
+          S3_ENDPOINT=$S3_ENDPOINT
+          S3_FORCE_PATH_STYLE=$S3_FORCE_PATH_STYLE
+          GEMINI_API_KEY=$GEMINI_API_KEY
+          PINECONE_API_KEY=$PINECONE_API_KEY
+          PINECONE_INDEX_NAME=$PINECONE_INDEX_NAME
+          GITHUB_APP_ID=$GH_APP_ID
+          GITHUB_APP_SLUG=$GH_APP_SLUG
+          GITHUB_APP_PRIVATE_KEY=$GH_APP_PRIVATE_KEY
+          GITHUB_WEBHOOK_SECRET=$GH_WEBHOOK_SECRET
+          GITHUB_APP_CALLBACK_URL=$GH_APP_CALLBACK_URL
+          CLIENT_ORIGIN=$CLIENT_ORIGIN
+          ENVEOF
+
+      - name: Run database migrations
+        # Runs directly on the runner (not in the container) against the
+        # native Postgres instance on the same host via DB_HOST=localhost.
+        run: npm run migration:run
+
+      - name: Preserve previous image for rollback
+        run: docker tag hopin-server:latest hopin-server:previous || true
+
+      - name: Build Docker image
+        run: |
+          docker build -t hopin-server:${{ github.sha }} -t hopin-server:latest .
+
+      - name: Stop previous container
+        run: |
+          docker stop hopin-server || true
+          docker rm hopin-server || true
+
+      - name: Start new container
+        run: |
+          docker run -d \
+            --name hopin-server \
+            --network host \
+            --env-file .env \
+            --restart unless-stopped \
+            hopin-server:${{ github.sha }}
+
+      - name: Wait for health check
+        run: |
+          for i in $(seq 1 15); do
+            if curl -fsS "http://127.0.0.1:${PORT:-3000}/health"; then
+              echo "Server is healthy"
+              exit 0
+            fi
+            echo "Waiting for server to become healthy... ($i/15)"
+            sleep 2
+          done
+          echo "Server failed health check after deploy"
+          docker logs --tail 100 hopin-server
+          exit 1
+
+      - name: Roll back on failed health check
+        if: failure()
+        run: |
+          docker stop hopin-server || true
+          docker rm hopin-server || true
+          docker run -d \
+            --name hopin-server \
+            --network host \
+            --env-file .env \
+            --restart unless-stopped \
+            hopin-server:previous || true
+
+      - name: Clean up dangling images
+        if: always()
+        run: docker image prune -f
