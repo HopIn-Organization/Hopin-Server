@@ -8,4 +8,5 @@ jobs:
     runs-on: [self-hosted, hopin-prod]
     steps:
       - name: Hello
-        run: echo "runner is alive: $(hostname) at $(date)"
+        run: |
+          echo "runner is alive: $(hostname) at $(date)"
