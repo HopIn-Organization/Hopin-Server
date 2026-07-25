@@ -1,0 +1,11 @@
+name: Runner Test
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: [self-hosted, hopin-prod]
+    steps:
+      - name: Hello
+        run: echo "runner is alive: $(hostname) at $(date)"
