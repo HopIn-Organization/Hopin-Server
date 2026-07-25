@@ -30,7 +30,7 @@ export class ProjectMemberController {
         role
       );
       res.status(201).json(member);
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error adding member to project' });
     }
   };
@@ -48,7 +48,7 @@ export class ProjectMemberController {
       );
 
       res.json(updatedMember);
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error updating member role' });
     }
   };
@@ -59,7 +59,7 @@ export class ProjectMemberController {
 
       await this.projectMemberService.removeMember(memberId);
       res.status(204).send();
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error removing member from project' });
     }
   };

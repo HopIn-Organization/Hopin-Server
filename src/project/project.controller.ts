@@ -13,7 +13,7 @@ export class ProjectController {
       const userId = req.user!.id;
       const projects = await this.projectService.getProjectsByUser(userId);
       res.json(projects);
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error fetching projects' });
     }
   };
@@ -27,7 +27,7 @@ export class ProjectController {
       } else {
         res.status(404).json({ message: 'Project not found' });
       }
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error fetching project' });
     }
   };
@@ -44,7 +44,7 @@ export class ProjectController {
       const project = await this.projectService.createProject(projectData);
 
       res.status(201).json(project);
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error creating project' });
     }
   };
@@ -85,7 +85,10 @@ export class ProjectController {
     }
   };
 
-  getDetailedStatistics = async (req: Request, res: Response): Promise<void> => {
+  getDetailedStatistics = async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
     try {
       const id = parseInt(req.params.id as string);
       const statistics = await this.projectService.getDetailedStatistics(id);
@@ -94,7 +97,11 @@ export class ProjectController {
       if (error.message === 'Project not found') {
         res.status(404).json({ message: 'Project not found' });
       } else {
-        console.error('[getDetailedStatistics] Error:', error?.message, error?.stack);
+        console.error(
+          '[getDetailedStatistics] Error:',
+          error?.message,
+          error?.stack
+        );
         res.status(500).json({ message: 'Error fetching statistics' });
       }
     }

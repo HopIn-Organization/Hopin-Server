@@ -8,11 +8,11 @@ export class JobController {
     this.jobService = new JobService();
   }
 
-  getAllJobs = async (req: Request, res: Response): Promise<void> => {
+  getAllJobs = async (_req: Request, res: Response): Promise<void> => {
     try {
       const jobs = await this.jobService.getAllJobs();
       res.json(jobs);
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error fetching jobs' });
     }
   };
@@ -26,7 +26,7 @@ export class JobController {
       } else {
         res.status(404).json({ message: 'Job not found' });
       }
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error fetching job' });
     }
   };
@@ -47,7 +47,7 @@ export class JobController {
         project: { id: projectId },
       });
       res.status(201).json(job);
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error creating job' });
     }
   };
@@ -76,7 +76,7 @@ export class JobController {
       } else {
         res.status(404).json({ message: 'Job not found' });
       }
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error adding skills to job' });
     }
   };

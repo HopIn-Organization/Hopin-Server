@@ -8,7 +8,7 @@ export class UserController {
     this.userService = new UserService();
   }
 
-  getAllUsers = async (req: Request, res: Response): Promise<void> => {
+  getAllUsers = async (_req: Request, res: Response): Promise<void> => {
     try {
       const users = await this.userService.getAllUsers();
 
@@ -29,7 +29,7 @@ export class UserController {
       } else {
         res.status(404).json({ message: 'User not found' });
       }
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error fetching user' });
     }
   };
@@ -43,7 +43,7 @@ export class UserController {
       }
       const user = await this.userService.createUser(userData);
       res.status(201).json(user);
-    } catch (error) {
+    } catch {
       res.status(500).json({ message: 'Error creating user' });
     }
   };

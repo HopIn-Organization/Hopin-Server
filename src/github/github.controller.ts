@@ -42,11 +42,18 @@ export class GithubController {
    * Body: { repoOwner: string, repoName: string, from?: "create" }
    * Returns the GitHub App install URL. Frontend redirects the user there.
    */
-  connect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-
+  connect = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const projectId = parseInt(req.params.id as string, 10);
-      const { repoOwner, repoName, from: rawFrom } = req.body as {
+      const {
+        repoOwner,
+        repoName,
+        from: rawFrom,
+      } = req.body as {
         repoOwner?: string;
         repoName?: string;
         from?: string;
@@ -69,7 +76,8 @@ export class GithubController {
 
       // Cheap duplicate pre-check by owner/name — the repoId-keyed check below
       // (and the callback upsert) stay authoritative.
-      const projectConnections = await this.connectionRepo.findAllByProjectId(projectId);
+      const projectConnections =
+        await this.connectionRepo.findAllByProjectId(projectId);
       const duplicate = projectConnections.find(
         c =>
           c.repoOwner.toLowerCase() === owner.toLowerCase() &&
@@ -77,39 +85,65 @@ export class GithubController {
           c.syncStatus !== SyncStatus.REVOKED
       );
       if (duplicate) {
-        res.status(409).json({ error: 'This repository is already connected to the project' });
+        res.status(409).json({
+          error: 'This repository is already connected to the project',
+        });
         return;
       }
 
-      const existingInstallationId = await this.githubService.isAlreadyInstalled('', owner, repo);
+      const existingInstallationId =
+        await this.githubService.isAlreadyInstalled('', owner, repo);
       if (existingInstallationId) {
-        const repoInfo = await this.githubService.getRepoInfo(existingInstallationId, owner, repo);
+        const repoInfo = await this.githubService.getRepoInfo(
+          existingInstallationId,
+          owner,
+          repo
+        );
 
-        const existing = await this.connectionRepo.findByProjectAndRepoId(projectId, repoInfo.repoId);
+        const existing = await this.connectionRepo.findByProjectAndRepoId(
+          projectId,
+          repoInfo.repoId
+        );
         if (existing && existing.syncStatus !== SyncStatus.REVOKED) {
-          res.status(409).json({ error: 'This repository is already connected to the project' });
+          res.status(409).json({
+            error: 'This repository is already connected to the project',
+          });
           return;
         }
 
-        const connection = await this.connectionRepo.upsertByProjectAndRepo(projectId, repoInfo.repoId, {
-          installationId: existingInstallationId,
-          repoOwner: owner,
-          repoName: repo,
-          isPrivate: repoInfo.isPrivate,
-          defaultBranch: repoInfo.defaultBranch,
-          syncStatus: SyncStatus.PENDING,
-          lastError: null,
-        });
-
-        this.syncService.runSync(connection).catch(err =>
-          console.error(`[GitHub] Unhandled error in runSync for project ${projectId}:`, err)
+        const connection = await this.connectionRepo.upsertByProjectAndRepo(
+          projectId,
+          repoInfo.repoId,
+          {
+            installationId: existingInstallationId,
+            repoOwner: owner,
+            repoName: repo,
+            isPrivate: repoInfo.isPrivate,
+            defaultBranch: repoInfo.defaultBranch,
+            syncStatus: SyncStatus.PENDING,
+            lastError: null,
+          }
         );
+
+        this.syncService
+          .runSync(connection)
+          .catch(err =>
+            console.error(
+              `[GitHub] Unhandled error in runSync for project ${projectId}:`,
+              err
+            )
+          );
 
         res.json({ alreadyConnected: true });
         return;
       }
 
-      const installUrl = this.githubService.buildInstallUrl(projectId, owner, repo, from);
+      const installUrl = this.githubService.buildInstallUrl(
+        projectId,
+        owner,
+        repo,
+        from
+      );
       res.json({ installUrl });
     } catch (error) {
       next(error);
@@ -122,13 +156,16 @@ export class GithubController {
    * This is a global route (not under /projects/:id) because GitHub App
    * callback URLs are fixed — the projectId travels inside the state param.
    */
-  callback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  callback = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
-      const {
-        installation_id,
-        state,
-        setup_action,
-      } = req.query as Record<string, string>;
+      const { installation_id, state, setup_action } = req.query as Record<
+        string,
+        string
+      >;
 
       if (setup_action === 'delete') {
         // User uninstalled the App from GitHub's UI — nothing to connect,
@@ -142,7 +179,12 @@ export class GithubController {
         return;
       }
 
-      let decoded: { projectId: number; repoOwner: string; repoName: string; from?: string };
+      let decoded: {
+        projectId: number;
+        repoOwner: string;
+        repoName: string;
+        from?: string;
+      };
       try {
         decoded = this.githubService.decodeState(state);
       } catch {
@@ -152,14 +194,13 @@ export class GithubController {
 
       const { projectId, repoOwner, repoName, from } = decoded;
 
-      const confirmedInstallationId = await this.githubService.isAlreadyInstalled(
-        '',
-        repoOwner,
-        repoName
-      );
+      const confirmedInstallationId =
+        await this.githubService.isAlreadyInstalled('', repoOwner, repoName);
       if (!confirmedInstallationId) {
         const reason = `The GitHub App is not installed on ${repoOwner}/${repoName}. Please install it and grant access to this repository.`;
-        res.redirect(this.buildClientRedirect(projectId, { github: 'error', reason }, from));
+        res.redirect(
+          this.buildClientRedirect(projectId, { github: 'error', reason }, from)
+        );
         return;
       }
 
@@ -176,27 +217,40 @@ export class GithubController {
           status === 404
             ? `Repository ${repoOwner}/${repoName} not found. Make sure the name is correct and the app was granted access to it.`
             : status === 403
-            ? `No permission to access ${repoOwner}/${repoName}. Grant the app access to this repository on GitHub.`
-            : `Could not reach ${repoOwner}/${repoName}. Please try again.`;
-        res.redirect(this.buildClientRedirect(projectId, { github: 'error', reason }, from));
+              ? `No permission to access ${repoOwner}/${repoName}. Grant the app access to this repository on GitHub.`
+              : `Could not reach ${repoOwner}/${repoName}. Please try again.`;
+        res.redirect(
+          this.buildClientRedirect(projectId, { github: 'error', reason }, from)
+        );
         return;
       }
 
-      const connection = await this.connectionRepo.upsertByProjectAndRepo(projectId, repoInfo.repoId, {
-        installationId: installation_id,
-        repoOwner,
-        repoName,
-        isPrivate: repoInfo.isPrivate,
-        defaultBranch: repoInfo.defaultBranch,
-        syncStatus: SyncStatus.PENDING,
-        lastError: null,
-      });
-
-      this.syncService.runSync(connection).catch(err =>
-        console.error(`[GitHub] Unhandled error in runSync for project ${projectId}:`, err)
+      const connection = await this.connectionRepo.upsertByProjectAndRepo(
+        projectId,
+        repoInfo.repoId,
+        {
+          installationId: installation_id,
+          repoOwner,
+          repoName,
+          isPrivate: repoInfo.isPrivate,
+          defaultBranch: repoInfo.defaultBranch,
+          syncStatus: SyncStatus.PENDING,
+          lastError: null,
+        }
       );
 
-      res.redirect(this.buildClientRedirect(projectId, { github: 'connected' }, from));
+      this.syncService
+        .runSync(connection)
+        .catch(err =>
+          console.error(
+            `[GitHub] Unhandled error in runSync for project ${projectId}:`,
+            err
+          )
+        );
+
+      res.redirect(
+        this.buildClientRedirect(projectId, { github: 'connected' }, from)
+      );
     } catch (error) {
       next(error);
     }
@@ -206,7 +260,11 @@ export class GithubController {
    * POST /projects/:id/github/:connectionId/sync
    * Triggers a manual sync of one connection. Returns 202 immediately; sync runs in background.
    */
-  sync = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  sync = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const projectId = parseInt(req.params.id as string, 10);
       const connectionId = parseInt(req.params.connectionId as string, 10);
@@ -216,10 +274,15 @@ export class GithubController {
         return;
       }
 
-      const connection = await this.connectionRepo.findByIdForProject(projectId, connectionId);
+      const connection = await this.connectionRepo.findByIdForProject(
+        projectId,
+        connectionId
+      );
 
       if (!connection) {
-        res.status(404).json({ error: 'No GitHub connection found for this project' });
+        res
+          .status(404)
+          .json({ error: 'No GitHub connection found for this project' });
         return;
       }
 
@@ -228,12 +291,14 @@ export class GithubController {
         return;
       }
 
-      this.syncService.runSync(connection).catch(err =>
-        console.error(
-          `[GitHub] Unhandled error in runSync for project ${projectId}:`,
-          err
-        )
-      );
+      this.syncService
+        .runSync(connection)
+        .catch(err =>
+          console.error(
+            `[GitHub] Unhandled error in runSync for project ${projectId}:`,
+            err
+          )
+        );
 
       res.status(202).json({ message: 'Sync started' });
     } catch (error) {
@@ -245,10 +310,15 @@ export class GithubController {
    * GET /projects/:id/github
    * Lists all GitHub connections of the project. Always 200 with an array.
    */
-  list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  list = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const projectId = parseInt(req.params.id as string, 10);
-      const connections = await this.connectionRepo.findAllByProjectId(projectId);
+      const connections =
+        await this.connectionRepo.findAllByProjectId(projectId);
 
       res.json(
         connections.map(connection => ({
@@ -274,7 +344,11 @@ export class GithubController {
    * Removes the DB record. Does NOT uninstall the App on GitHub — the user
    * does that from their GitHub org/account settings.
    */
-  disconnect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  disconnect = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const projectId = parseInt(req.params.id as string, 10);
       const connectionId = parseInt(req.params.connectionId as string, 10);
@@ -284,9 +358,14 @@ export class GithubController {
         return;
       }
 
-      const connection = await this.connectionRepo.findByIdForProject(projectId, connectionId);
+      const connection = await this.connectionRepo.findByIdForProject(
+        projectId,
+        connectionId
+      );
       if (!connection) {
-        res.status(404).json({ error: 'No GitHub connection found for this project' });
+        res
+          .status(404)
+          .json({ error: 'No GitHub connection found for this project' });
         return;
       }
 

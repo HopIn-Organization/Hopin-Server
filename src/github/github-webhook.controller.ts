@@ -13,14 +13,23 @@ export class GithubWebhookController {
     this.syncService = new GithubSyncService();
   }
 
-  handle = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  handle = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Verify the HMAC-SHA256 signature before processing anything else.
       // req.body is a raw Buffer here because the route uses express.raw().
       const sig = req.headers['x-hub-signature-256'] as string | undefined;
       const secret = process.env.GITHUB_WEBHOOK_SECRET;
 
-      console.log('[GitHub Webhook] Received event:', req.headers['x-github-event'], 'with signature:', sig);
+      console.log(
+        '[GitHub Webhook] Received event:',
+        req.headers['x-github-event'],
+        'with signature:',
+        sig
+      );
       if (!secret) {
         console.error('[GitHub Webhook] GITHUB_WEBHOOK_SECRET is not set');
         res.status(500).json({ error: 'Webhook secret not configured' });
@@ -87,14 +96,17 @@ export class GithubWebhookController {
           for (const connection of connections) {
             if (connection.syncStatus === SyncStatus.REVOKED) continue;
             if (pushedRepoId !== connection.repoId) continue;
-            if (pushedRef !== `refs/heads/${connection.defaultBranch}`) continue;
+            if (pushedRef !== `refs/heads/${connection.defaultBranch}`)
+              continue;
 
-            this.syncService.runSync(connection).catch(err =>
-              console.error(
-                `[GitHub Webhook] Sync failed for connection ${connection.id} (installation ${installationId}):`,
-                err
-              )
-            );
+            this.syncService
+              .runSync(connection)
+              .catch(err =>
+                console.error(
+                  `[GitHub Webhook] Sync failed for connection ${connection.id} (installation ${installationId}):`,
+                  err
+                )
+              );
           }
         }
       }
