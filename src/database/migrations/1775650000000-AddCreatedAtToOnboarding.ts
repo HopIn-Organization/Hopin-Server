@@ -10,6 +10,8 @@ export class AddCreatedAtToOnboarding1775650000000 implements MigrationInterface
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "onboarding" DROP COLUMN "created_at"`);
+    await queryRunner.query(
+      `ALTER TABLE "onboarding" DROP COLUMN "created_at"`
+    );
   }
 }

@@ -1,10 +1,10 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateProjectDocuments1775450000000 implements MigrationInterface {
-    name = 'CreateProjectDocuments1775450000000'
+  name = 'CreateProjectDocuments1775450000000';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             CREATE TABLE "project_documents" (
                 "id"            SERIAL              NOT NULL,
                 "original_name" text                NOT NULL,
@@ -21,9 +21,9 @@ export class CreateProjectDocuments1775450000000 implements MigrationInterface {
                     FOREIGN KEY ("job_id") REFERENCES "jobs"("id") ON DELETE CASCADE
             )
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP TABLE "project_documents"`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP TABLE "project_documents"`);
+  }
 }

@@ -14,7 +14,7 @@ const isSubtaskObject = (value: unknown): boolean => {
     typeof item.estimatedDays === 'number' &&
     (item.links === undefined ||
       (Array.isArray(item.links) &&
-        (item.links as unknown[]).every((l) => typeof l === 'string')))
+        (item.links as unknown[]).every(l => typeof l === 'string')))
   );
 };
 
@@ -41,7 +41,7 @@ const isTaskObject = (value: unknown): value is Task => {
     (task.links === undefined ||
       task.links === null ||
       (Array.isArray(task.links) &&
-        (task.links as unknown[]).every((l) => typeof l === 'string')))
+        (task.links as unknown[]).every(l => typeof l === 'string')))
   );
 };
 

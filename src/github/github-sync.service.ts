@@ -9,12 +9,26 @@ import { LLMService } from '../services/llm.service';
 import { S3Service } from '../document/s3.service';
 
 const IGNORED_DIRS = new Set([
-  'node_modules', '.git', 'dist', 'build', '.next',
-  '__pycache__', '.venv', 'vendor', 'coverage', '.turbo',
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  '.next',
+  '__pycache__',
+  '.venv',
+  'vendor',
+  'coverage',
+  '.turbo',
 ]);
 
 // README candidates checked in priority order
-const README_FILENAMES = ['README.md', 'readme.md', 'README.rst', 'README.txt', 'README'];
+const README_FILENAMES = [
+  'README.md',
+  'readme.md',
+  'README.rst',
+  'README.txt',
+  'README',
+];
 
 const MAX_README_CHARS = 12000;
 const MAX_FILE_CHARS = 6000;
@@ -28,10 +42,19 @@ const MAX_REFINEMENT_ROUNDS = 0;
 export interface RepoKnowledgeSummary {
   architectureOverview: string;
   keyLibraries: Array<{ name: string; purpose: string; whereUsed: string[] }>;
-  moduleBreakdown: Array<{ path: string; purpose: string; dependsOn: string[] }>;
+  moduleBreakdown: Array<{
+    path: string;
+    purpose: string;
+    dependsOn: string[];
+  }>;
   /** Each entry has the actual relative file path and a short description of what to learn from it. */
   suggestedReadingOrder: Array<{ path: string; description: string }>;
-  techStack: { language: string; framework: string; database: string; other: string[] };
+  techStack: {
+    language: string;
+    framework: string;
+    database: string;
+    other: string[];
+  };
   /** Full directory tree (up to TREE_DEPTH levels, build artefacts excluded). */
   fileTree: string;
   /** Filename of the README found at root (e.g. "README.md"), or null if none. */
@@ -64,7 +87,9 @@ export class GithubSyncService {
         lastError: null,
       });
 
-      const token = await this.githubService.getInstallationToken(connection.installationId);
+      const token = await this.githubService.getInstallationToken(
+        connection.installationId
+      );
       const cloneUrl = this.githubService.buildCloneUrl(
         token,
         connection.repoOwner,
@@ -77,8 +102,10 @@ export class GithubSyncService {
 
       try {
         await simpleGit().clone(cloneUrl, tmpDir, [
-          '--depth', '1',
-          '--branch', connection.defaultBranch,
+          '--depth',
+          '1',
+          '--branch',
+          connection.defaultBranch,
         ]);
 
         const headSha = (await simpleGit(tmpDir).revparse(['HEAD'])).trim();
@@ -86,12 +113,21 @@ export class GithubSyncService {
         const repo = `${connection.repoOwner}/${connection.repoName}`;
 
         if (headSha === connection.lastCommitSha) {
-          await this.connectionRepo.update(connection.id, { syncStatus: SyncStatus.SYNCED });
-          console.log(`[GitHub Sync] ${repo}: no new commits since ${headSha.slice(0, 7)}, skipping`);
+          await this.connectionRepo.update(connection.id, {
+            syncStatus: SyncStatus.SYNCED,
+          });
+          console.log(
+            `[GitHub Sync] ${repo}: no new commits since ${headSha.slice(0, 7)}, skipping`
+          );
           return;
         }
 
-        const summary = await this.extractKnowledge(tmpDir, headSha, connection.repoOwner, connection.repoName);
+        const summary = await this.extractKnowledge(
+          tmpDir,
+          headSha,
+          connection.repoOwner,
+          connection.repoName
+        );
 
         const s3Key = `projects/${connection.project_id}/repo-knowledge/${connection.id}/${headSha}.json`;
         await this.s3Service.upload(
@@ -107,7 +143,9 @@ export class GithubSyncService {
           lastError: null,
         });
 
-        console.log(`[GitHub Sync] ${repo}: synced commit ${headSha.slice(0, 7)}`);
+        console.log(
+          `[GitHub Sync] ${repo}: synced commit ${headSha.slice(0, 7)}`
+        );
       } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
       }
@@ -135,14 +173,37 @@ export class GithubSyncService {
 
     const tree = this.buildFileTree(repoDir, TREE_DEPTH);
     const readme = this.readReadme(repoDir);
-    const files = await this.selectImportantFiles(repoDir, { packageJson, tree, readme }, repoOwner, repoName);
+    const files = await this.selectImportantFiles(
+      repoDir,
+      { packageJson, tree, readme },
+      repoOwner,
+      repoName
+    );
 
-    const prompt = this.buildExtractionPrompt({ packageJson, tree, files, readme });
-    console.log(`[GitHub Sync] ${repoOwner}/${repoName}: sending extraction prompt to LLM (${files.length} files, commit ${commitSha.slice(0, 7)})`);
+    const prompt = this.buildExtractionPrompt({
+      packageJson,
+      tree,
+      files,
+      readme,
+    });
+    console.log(
+      `[GitHub Sync] ${repoOwner}/${repoName}: sending extraction prompt to LLM (${files.length} files, commit ${commitSha.slice(0, 7)})`
+    );
     const raw = await this.llmService.generateJson(prompt);
-    console.log(`[GitHub Sync] ${repoOwner}/${repoName}: LLM extraction complete`);
+    console.log(
+      `[GitHub Sync] ${repoOwner}/${repoName}: LLM extraction complete`
+    );
 
-    const summary = raw as Omit<RepoKnowledgeSummary, 'commitSha' | 'generatedAt' | 'fileTree' | 'readmeFile' | 'analyzedFiles' | 'repoOwner' | 'repoName'>;
+    const summary = raw as Omit<
+      RepoKnowledgeSummary,
+      | 'commitSha'
+      | 'generatedAt'
+      | 'fileTree'
+      | 'readmeFile'
+      | 'analyzedFiles'
+      | 'repoOwner'
+      | 'repoName'
+    >;
     return {
       ...summary,
       commitSha,
@@ -179,25 +240,39 @@ export class GithubSyncService {
       this.buildFileSelectionPrompt(ctx)
     );
     const requested = this.extractRequestedPaths(initialRaw);
-    console.log(`[GitHub Sync] ${repo}: LLM initial file selection: ${requested.join(', ') || '(none)'}`);
-    files.push(...this.readRequestedFiles(repoDir, requested, MAX_INITIAL_FILES, seen));
+    console.log(
+      `[GitHub Sync] ${repo}: LLM initial file selection: ${requested.join(', ') || '(none)'}`
+    );
+    files.push(
+      ...this.readRequestedFiles(repoDir, requested, MAX_INITIAL_FILES, seen)
+    );
     let errorInRefinement = undefined;
     try {
-
       for (let round = 1; round <= MAX_REFINEMENT_ROUNDS; round++) {
-        console.log(`[GitHub Sync] ${repo}: sending refinement prompt to LLM (round ${round}, ${files.length} files so far)`);
+        console.log(
+          `[GitHub Sync] ${repo}: sending refinement prompt to LLM (round ${round}, ${files.length} files so far)`
+        );
         const raw = await this.llmService.generateJson(
           this.buildRefinementPrompt(ctx, files)
         );
         const res = (raw ?? {}) as { enough?: unknown; files?: unknown };
         if (res.enough === true) {
-          console.log(`[GitHub Sync] ${repo}: LLM confirmed context sufficient after round ${round}`);
+          console.log(
+            `[GitHub Sync] ${repo}: LLM confirmed context sufficient after round ${round}`
+          );
           break;
         }
 
         const more = this.extractRequestedPaths(raw);
-        console.log(`[GitHub Sync] ${repo}: LLM refinement round ${round} requested: ${more.join(', ') || '(none)'}`);
-        const added = this.readRequestedFiles(repoDir, more, MAX_ADDITIONAL_FILES, seen);
+        console.log(
+          `[GitHub Sync] ${repo}: LLM refinement round ${round} requested: ${more.join(', ') || '(none)'}`
+        );
+        const added = this.readRequestedFiles(
+          repoDir,
+          more,
+          MAX_ADDITIONAL_FILES,
+          seen
+        );
         if (added.length === 0) break; // nothing new to read — stop iterating
         files.push(...added);
       }
@@ -205,19 +280,22 @@ export class GithubSyncService {
       errorInRefinement = error;
       console.warn(`[GitHub Sync] ${repo}: LLM refinement failed (non-fatal)`);
     } finally {
-
       if (files.length > 0) {
-      return files;
-    } else {
-      throw errorInRefinement ?? new Error('LLM did not select any files to read');
-  }
-}
+        return files;
+      } else {
+        throw (
+          errorInRefinement ?? new Error('LLM did not select any files to read')
+        );
+      }
+    }
   }
 
   /** Pulls a string[] of file paths out of an LLM JSON response, tolerating malformed shapes. */
   private extractRequestedPaths(raw: unknown): string[] {
     const value = (raw as { files?: unknown } | null)?.files;
-    return Array.isArray(value) ? value.filter((p): p is string => typeof p === 'string') : [];
+    return Array.isArray(value)
+      ? value.filter((p): p is string => typeof p === 'string')
+      : [];
   }
 
   /** Reads requested paths (up to `limit`), skipping duplicates, missing files, and paths outside the repo. */
@@ -232,21 +310,31 @@ export class GithubSyncService {
 
     for (const rawPath of requested) {
       if (results.length >= limit) break;
-      const rel = rawPath.replace(/\\/g, '/').replace(/^\.?\//, '').trim();
+      const rel = rawPath
+        .replace(/\\/g, '/')
+        .replace(/^\.?\//, '')
+        .trim();
       if (!rel || seen.has(rel)) continue;
 
       const fullPath = path.resolve(repoRoot, rel);
       if (fullPath !== repoRoot && !fullPath.startsWith(repoRoot + path.sep)) {
-        console.warn(`[GitHub Sync] LLM requested path outside repo, skipping: ${rawPath}`);
+        console.warn(
+          `[GitHub Sync] LLM requested path outside repo, skipping: ${rawPath}`
+        );
         continue;
       }
       if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
-        console.warn(`[GitHub Sync] LLM requested non-existent file, skipping: ${rel}`);
+        console.warn(
+          `[GitHub Sync] LLM requested non-existent file, skipping: ${rel}`
+        );
         continue;
       }
 
       seen.add(rel);
-      results.push({ path: rel, content: fs.readFileSync(fullPath, 'utf8').slice(0, MAX_FILE_CHARS) });
+      results.push({
+        path: rel,
+        content: fs.readFileSync(fullPath, 'utf8').slice(0, MAX_FILE_CHARS),
+      });
     }
 
     return results;
@@ -288,11 +376,15 @@ export class GithubSyncService {
   }
 
   /** Returns the first README found at repo root, or null. */
-  private readReadme(repoDir: string): { path: string; content: string } | null {
+  private readReadme(
+    repoDir: string
+  ): { path: string; content: string } | null {
     for (const name of README_FILENAMES) {
       const fullPath = path.join(repoDir, name);
       if (fs.existsSync(fullPath)) {
-        const content = fs.readFileSync(fullPath, 'utf8').slice(0, MAX_README_CHARS);
+        const content = fs
+          .readFileSync(fullPath, 'utf8')
+          .slice(0, MAX_README_CHARS);
         return { path: name, content };
       }
     }
@@ -342,9 +434,10 @@ Output ONLY valid JSON — no markdown fences, no explanation:
     },
     filesRead: Array<{ path: string; content: string }>
   ): string {
-    const filesSection = filesRead.length > 0
-      ? filesRead.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')
-      : 'No files read yet.';
+    const filesSection =
+      filesRead.length > 0
+        ? filesRead.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')
+        : 'No files read yet.';
 
     return `You are a senior software architect preparing to write a structured onboarding knowledge summary of a code repository (architecture overview, key libraries, module breakdown, suggested reading order, tech stack).
 
@@ -376,9 +469,7 @@ Output ONLY valid JSON — no markdown fences, no explanation:
 
     const filesSection =
       input.files.length > 0
-        ? input.files
-            .map(f => `--- ${f.path} ---\n${f.content}`)
-            .join('\n\n')
+        ? input.files.map(f => `--- ${f.path} ---\n${f.content}`).join('\n\n')
         : 'No key files were read.';
 
     return `You are a senior software architect analyzing a code repository to produce a structured onboarding knowledge summary.

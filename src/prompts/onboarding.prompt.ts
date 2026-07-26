@@ -12,9 +12,18 @@ Company Onboarding Guidelines:
 export interface RepoKnowledgeSummary {
   architectureOverview: string;
   keyLibraries: Array<{ name: string; purpose: string; whereUsed: string[] }>;
-  moduleBreakdown: Array<{ path: string; purpose: string; dependsOn: string[] }>;
+  moduleBreakdown: Array<{
+    path: string;
+    purpose: string;
+    dependsOn: string[];
+  }>;
   suggestedReadingOrder: Array<{ path: string; description: string }>;
-  techStack: { language: string; framework: string; database: string; other: string[] };
+  techStack: {
+    language: string;
+    framework: string;
+    database: string;
+    other: string[];
+  };
   fileTree?: string;
   readmeFile?: string | null;
   /** Relative paths of the files the LLM read when building this summary. */
@@ -39,7 +48,10 @@ export interface OnboardingPromptInput {
   repoKnowledge?: RepoKnowledgeSummary[] | null;
 }
 
-function renderRepoSubsection(repoKnowledge: RepoKnowledgeSummary, index: number): string {
+function renderRepoSubsection(
+  repoKnowledge: RepoKnowledgeSummary,
+  index: number
+): string {
   const { repoOwner, repoName, commitSha } = repoKnowledge;
   const canLink = repoOwner && repoName;
 
@@ -57,7 +69,10 @@ function renderRepoSubsection(repoKnowledge: RepoKnowledgeSummary, index: number
       : null;
 
   const readingOrderLines = repoKnowledge.suggestedReadingOrder
-    .map((item, i) => `${i + 1}. ${item.path}${ghLink(item.path)} — ${item.description}`)
+    .map(
+      (item, i) =>
+        `${i + 1}. ${item.path}${ghLink(item.path)} — ${item.description}`
+    )
     .join('\n');
 
   const moduleLines = repoKnowledge.moduleBreakdown
@@ -79,7 +94,9 @@ function renderRepoSubsection(repoKnowledge: RepoKnowledgeSummary, index: number
     ? `https://github.com/${repoOwner}/${repoName}/blob/${commitSha}/{filePath}`
     : null;
 
-  const repoLabel = canLink ? `${repoOwner}/${repoName}` : `Repository ${index + 1}`;
+  const repoLabel = canLink
+    ? `${repoOwner}/${repoName}`
+    : `Repository ${index + 1}`;
 
   return `
 ### Repository ${index + 1}: ${repoLabel} (commit ${commitSha.slice(0, 7)})

@@ -20,6 +20,9 @@ export class Project {
   @OneToMany(() => ProjectMember, membership => membership.project)
   members!: ProjectMember[];
 
-  @OneToMany(() => GithubConnection, githubConnection => githubConnection.project)
+  @OneToMany(
+    () => GithubConnection,
+    githubConnection => githubConnection.project
+  )
   githubConnections!: GithubConnection[];
 }

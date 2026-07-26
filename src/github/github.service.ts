@@ -36,7 +36,10 @@ export class GithubService {
     if (headerMatch && footerMatch) {
       const header = headerMatch[0];
       const footer = footerMatch[0];
-      const body = normalized.replace(header, '').replace(footer, '').replace(/\s+/g, '');
+      const body = normalized
+        .replace(header, '')
+        .replace(footer, '')
+        .replace(/\s+/g, '');
       const wrapped = (body.match(/.{1,64}/g) ?? [body]).join('\n');
       return `${header}\n${wrapped}\n${footer}`;
     }
@@ -57,9 +60,19 @@ export class GithubService {
   }
 
   /** URL the user visits to install the App and pick which repos to grant access to. */
-  buildInstallUrl(projectId: number, repoOwner: string, repoName: string, from?: string): string {
+  buildInstallUrl(
+    projectId: number,
+    repoOwner: string,
+    repoName: string,
+    from?: string
+  ): string {
     const state = Buffer.from(
-      JSON.stringify({ projectId, repoOwner, repoName, ...(from && { from }) } satisfies InstallState)
+      JSON.stringify({
+        projectId,
+        repoOwner,
+        repoName,
+        ...(from && { from }),
+      } satisfies InstallState)
     ).toString('base64');
     // redirect_uri overrides the default Setup URL in GitHub App settings so we
     // always land on the exact callback endpoint we control, regardless of what
@@ -72,7 +85,9 @@ export class GithubService {
 
   /** Decodes the base64 state param that GitHub echoes back in the callback. */
   decodeState(state: string): InstallState {
-    return JSON.parse(Buffer.from(state, 'base64').toString('utf8')) as InstallState;
+    return JSON.parse(
+      Buffer.from(state, 'base64').toString('utf8')
+    ) as InstallState;
   }
 
   /** Mints a short-lived installation token (~1 hr). Always call fresh — never cache. */

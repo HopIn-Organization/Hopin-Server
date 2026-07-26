@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { JobController } from './job.controller';
-import { authenticateAccessToken } from '../auth/auth.middleware';
 import { requireProjectAdmin } from '../projectMember/projectMember.middleware';
 
 const router = Router();

@@ -203,7 +203,9 @@ export class DocumentService {
       );
       if (results.length > 0) {
         results.forEach((r, i) =>
-          console.log(`  [${i + 1}] score=${r.score.toFixed(4)} file="${r.sourceFileName}"`)
+          console.log(
+            `  [${i + 1}] score=${r.score.toFixed(4)} file="${r.sourceFileName}"`
+          )
         );
         return results.map(r => ({
           text: r.text,

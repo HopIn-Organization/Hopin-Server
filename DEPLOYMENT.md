@@ -118,36 +118,36 @@ gitignored). Copy `.env.example` to `.env` in `~/hopin/Hopin-Server` and
 fill in real values (SFTP the file up, or `nano .env` directly over SSH —
 either way, over the VPN, never over plain email/chat):
 
-| Variable | Production value |
-|---|---|
-| `PORT` | `3000` |
-| `DB_HOST` | `localhost` |
-| `DB_PORT` | `5432` |
-| `DB_USERNAME` | `postgres` |
-| `DB_PASSWORD` | the (rotated) postgres password |
-| `DB_NAME` | `hopin_prod` |
-| `DB_SYNCHRONIZE` | `false` (use migrations in prod, not auto-sync) |
-| `DB_LOGGING` | `false` |
-| `JWT_ACCESS_SECRET` | generate fresh — don't reuse the dev value |
-| `JWT_REFRESH_SECRET` | generate fresh — don't reuse the dev value |
-| `JWT_ACCESS_EXPIRES_IN` | `15m` |
-| `JWT_REFRESH_EXPIRES_IN` | `7d` |
-| `REFRESH_TOKEN_TTL_DAYS` | `7` |
-| `LANGFUSE_HOST` | `https://api.langfuse.com` |
-| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | your prod Langfuse keys (a separate prod project vs. dev is a good idea) |
-| `LANGFUSE_ENABLED` | `true` |
-| `AWS_REGION` | `us-east-1` (MinIO ignores it, SDK requires one set) |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | `minioadmin` / `minioadmin` (or your MinIO root creds, if changed) |
-| `S3_BUCKET_NAME` | `hopin-project-documents` |
-| `S3_ENDPOINT` | `http://localhost:9000` |
-| `S3_FORCE_PATH_STYLE` | `true` |
-| `GEMINI_API_KEY` | your Gemini API key |
-| `PINECONE_API_KEY` / `PINECONE_INDEX_NAME` | your Pinecone key/index |
-| `GITHUB_APP_ID` / `GITHUB_APP_SLUG` | your GitHub App's ID/slug |
-| `GITHUB_APP_PRIVATE_KEY` | your GitHub App's private key (`.pem` contents, newlines escaped as `\n`) |
-| `GITHUB_WEBHOOK_SECRET` | your GitHub App's webhook secret |
-| `GITHUB_APP_CALLBACK_URL` | `https://hopIn.cs.colman.ac.il/api/github/callback` (must exactly match the Setup URL configured in the GitHub App settings) |
-| `CLIENT_ORIGIN` | `https://hopIn.cs.colman.ac.il` |
+| Variable                                      | Production value                                                                                                             |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                        | `3000`                                                                                                                       |
+| `DB_HOST`                                     | `localhost`                                                                                                                  |
+| `DB_PORT`                                     | `5432`                                                                                                                       |
+| `DB_USERNAME`                                 | `postgres`                                                                                                                   |
+| `DB_PASSWORD`                                 | the (rotated) postgres password                                                                                              |
+| `DB_NAME`                                     | `hopin_prod`                                                                                                                 |
+| `DB_SYNCHRONIZE`                              | `false` (use migrations in prod, not auto-sync)                                                                              |
+| `DB_LOGGING`                                  | `false`                                                                                                                      |
+| `JWT_ACCESS_SECRET`                           | generate fresh — don't reuse the dev value                                                                                   |
+| `JWT_REFRESH_SECRET`                          | generate fresh — don't reuse the dev value                                                                                   |
+| `JWT_ACCESS_EXPIRES_IN`                       | `15m`                                                                                                                        |
+| `JWT_REFRESH_EXPIRES_IN`                      | `7d`                                                                                                                         |
+| `REFRESH_TOKEN_TTL_DAYS`                      | `7`                                                                                                                          |
+| `LANGFUSE_HOST`                               | `https://api.langfuse.com`                                                                                                   |
+| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | your prod Langfuse keys (a separate prod project vs. dev is a good idea)                                                     |
+| `LANGFUSE_ENABLED`                            | `true`                                                                                                                       |
+| `AWS_REGION`                                  | `us-east-1` (MinIO ignores it, SDK requires one set)                                                                         |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | `minioadmin` / `minioadmin` (or your MinIO root creds, if changed)                                                           |
+| `S3_BUCKET_NAME`                              | `hopin-project-documents`                                                                                                    |
+| `S3_ENDPOINT`                                 | `http://localhost:9000`                                                                                                      |
+| `S3_FORCE_PATH_STYLE`                         | `true`                                                                                                                       |
+| `GEMINI_API_KEY`                              | your Gemini API key                                                                                                          |
+| `PINECONE_API_KEY` / `PINECONE_INDEX_NAME`    | your Pinecone key/index                                                                                                      |
+| `GITHUB_APP_ID` / `GITHUB_APP_SLUG`           | your GitHub App's ID/slug                                                                                                    |
+| `GITHUB_APP_PRIVATE_KEY`                      | your GitHub App's private key (`.pem` contents, newlines escaped as `\n`)                                                    |
+| `GITHUB_WEBHOOK_SECRET`                       | your GitHub App's webhook secret                                                                                             |
+| `GITHUB_APP_CALLBACK_URL`                     | `https://hopIn.cs.colman.ac.il/api/github/callback` (must exactly match the Setup URL configured in the GitHub App settings) |
+| `CLIENT_ORIGIN`                               | `https://hopIn.cs.colman.ac.il`                                                                                              |
 
 `deploy/deploy.sh` refuses to run if this file is missing, and never
 overwrites it — pulling new code never touches your secrets.

@@ -30,20 +30,20 @@ export class DocumentEmbeddingService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            requests: batch.map((text) => ({
+            requests: batch.map(text => ({
               model: `models/${EMBEDDING_MODEL}`,
               content: { parts: [{ text }] },
               taskType: 'RETRIEVAL_DOCUMENT',
               outputDimensionality: EMBEDDING_DIMS,
             })),
           }),
-        },
+        }
       );
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
         throw new Error(
-          `Embedding API error ${response.status}: ${JSON.stringify(errorBody)}`,
+          `Embedding API error ${response.status}: ${JSON.stringify(errorBody)}`
         );
       }
 

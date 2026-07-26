@@ -59,7 +59,9 @@ export class S3Service {
       );
     } catch (error: any) {
       if (error?.Code === 'NoSuchKey' || error?.name === 'NoSuchKey') {
-        console.warn(`[S3] Object not found during delete (already removed?): ${key}`);
+        console.warn(
+          `[S3] Object not found during delete (already removed?): ${key}`
+        );
         return;
       }
       throw error;

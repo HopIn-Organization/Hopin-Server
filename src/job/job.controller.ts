@@ -8,12 +8,14 @@ export class JobController {
     this.jobService = new JobService();
   }
 
-  getAllJobs = async (req: Request, res: Response): Promise<void> => {
+  getAllJobs = async (_req: Request, res: Response): Promise<void> => {
     try {
       const jobs = await this.jobService.getAllJobs();
       res.json(jobs);
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching jobs' });
+      const message =
+        error instanceof Error ? error.message : 'Error fetching jobs';
+      res.status(500).json({ message });
     }
   };
 
@@ -27,7 +29,9 @@ export class JobController {
         res.status(404).json({ message: 'Job not found' });
       }
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching job' });
+      const message =
+        error instanceof Error ? error.message : 'Error fetching job';
+      res.status(500).json({ message });
     }
   };
 
@@ -48,7 +52,9 @@ export class JobController {
       });
       res.status(201).json(job);
     } catch (error) {
-      res.status(500).json({ message: 'Error creating job' });
+      const message =
+        error instanceof Error ? error.message : 'Error creating job';
+      res.status(500).json({ message });
     }
   };
 
@@ -77,7 +83,9 @@ export class JobController {
         res.status(404).json({ message: 'Job not found' });
       }
     } catch (error) {
-      res.status(500).json({ message: 'Error adding skills to job' });
+      const message =
+        error instanceof Error ? error.message : 'Error adding skills to job';
+      res.status(500).json({ message });
     }
   };
 }

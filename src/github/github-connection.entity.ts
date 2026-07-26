@@ -25,7 +25,9 @@ export class GithubConnection {
   @PrimaryGeneratedColumn({ type: 'integer', name: 'id' })
   id!: number;
 
-  @ManyToOne(() => Project, project => project.githubConnections, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Project, project => project.githubConnections, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'project_id' })
   project!: Project;
 

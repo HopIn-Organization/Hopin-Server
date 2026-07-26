@@ -14,10 +14,12 @@ describe('Job Module', () => {
     await request(app).post('/auth/register').send({
       email,
       password,
-      name: 'Job User'
+      name: 'Job User',
     });
 
-    const loginRes = await request(app).post('/auth/login').send({ email, password });
+    const loginRes = await request(app)
+      .post('/auth/login')
+      .send({ email, password });
     expect(loginRes.status).toBe(200);
     expect(loginRes.body).toHaveProperty('accessToken');
 
@@ -38,7 +40,7 @@ describe('Job Module', () => {
       .send({
         name: `Job Test Project ${Date.now()}`,
         jobs: [{ title: seedJobTitle }],
-        members: [{ userId, role: 'admin' }]
+        members: [{ userId, role: 'admin' }],
       });
     expect(projectRes.status).toBe(201);
     projectId = projectRes.body.id;
@@ -73,7 +75,9 @@ describe('Job Module', () => {
       .send(payload);
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual(expect.objectContaining({ id: expect.any(Number), title: payload.title }));
+    expect(res.body).toEqual(
+      expect.objectContaining({ id: expect.any(Number), title: payload.title })
+    );
   });
 
   test('POST /jobs invalid data should return 400', async () => {
@@ -104,7 +108,9 @@ describe('Job Module', () => {
 
     expect([200, 201]).toContain(skillResp.status);
     expect(skillResp.body).toHaveProperty('skills');
-    expect(skillResp.body.skills.map((s: any) => s.name)).toEqual(expect.arrayContaining([s1, s2]));
+    expect(skillResp.body.skills.map((s: any) => s.name)).toEqual(
+      expect.arrayContaining([s1, s2])
+    );
   });
 
   test('POST /jobs/:jobId/skills invalid should return 400', async () => {
