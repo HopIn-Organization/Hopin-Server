@@ -53,13 +53,22 @@ openssl crl2pkcs7 -nocrl -certfile /etc/ssl/cs/CSB.crt | openssl pkcs7 -print_ce
 # second command should list 2+ certs (leaf + intermediate) if the chain is complete
 ```
 
-Install the nginx site config:
+Install the nginx site config. This box's nginx is the official nginx.org
+package, which uses `/etc/nginx/conf.d/*.conf` (included directly from
+`nginx.conf`) rather than Debian's `sites-available`/`sites-enabled`
+convention — confirm with `grep include /etc/nginx/nginx.conf` if unsure:
 
 ```bash
-sudo cp ~/hopin/Hopin-Server/deploy/nginx.conf /etc/nginx/sites-available/hopin
-sudo ln -s /etc/nginx/sites-available/hopin /etc/nginx/sites-enabled/hopin
-sudo rm -f /etc/nginx/sites-enabled/default   # if present, avoid a conflicting default_server
+sudo rm -f /etc/nginx/conf.d/default.conf   # stock placeholder, conflicts with our server_name
+sudo cp ~/hopin/Hopin-Server/deploy/nginx.conf /etc/nginx/conf.d/hopin.conf
 sudo nginx -t && sudo systemctl reload nginx
+```
+
+Verify it actually took effect — this should show `hopIn.cs.colman.ac.il`,
+not `localhost`:
+
+```bash
+sudo nginx -T | grep -A3 "server_name"
 ```
 
 Confirm DNS: `hopIn.cs.colman.ac.il` should resolve to `193.106.55.82`. If
