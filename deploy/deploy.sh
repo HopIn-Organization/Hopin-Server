@@ -13,9 +13,9 @@ if [ ! -f .env ]; then
 fi
 
 echo "==> Pulling latest "
-git fetch origin prepare-prod
-git checkout prepare-prod
-git pull --ff-only origin prepare-prod
+git fetch origin main
+git checkout main
+git pull --ff-only origin main
 
 echo "==> Installing dependencies"
 npm ci
