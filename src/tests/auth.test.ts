@@ -17,35 +17,43 @@ describe('Auth Module', () => {
       const res = await request(app).post('/auth/register').send({
         email,
         password: 'SecurePassword123!',
-        name: 'Test User'
+        name: 'Test User',
       });
 
       expect(res.status).toBe(201);
       expect(res.body).toEqual(
         expect.objectContaining({
-          accessToken: expect.any(String)
+          accessToken: expect.any(String),
         })
       );
     });
 
     test('should return 400 for missing required fields', async () => {
-      const res = await request(app).post('/auth/register').send({ password: 'SecurePassword123!' });
+      const res = await request(app)
+        .post('/auth/register')
+        .send({ password: 'SecurePassword123!' });
       expect(res.status).toBe(400);
       expect(res.body.message).toContain('required');
     });
 
     test('should return 400 for missing password', async () => {
-      const res = await request(app).post('/auth/register').send({
-        email: `missing_pass_${Date.now()}@example.com`,
-        name: 'Test User'
-      });
+      const res = await request(app)
+        .post('/auth/register')
+        .send({
+          email: `missing_pass_${Date.now()}@example.com`,
+          name: 'Test User',
+        });
       expect(res.status).toBe(400);
       expect(res.body.message).toContain('required');
     });
 
     test('should reject duplicate email', async () => {
       const email = `dup_${Date.now()}@example.com`;
-      const payload = { email, password: 'SecurePassword123!', name: 'Dup User' };
+      const payload = {
+        email,
+        password: 'SecurePassword123!',
+        name: 'Dup User',
+      };
 
       await request(app).post('/auth/register').send(payload);
       const res = await request(app).post('/auth/register').send(payload);
@@ -63,14 +71,14 @@ describe('Auth Module', () => {
       await request(app).post('/auth/register').send({
         email: loginEmail,
         password: loginPassword,
-        name: 'Login Test User'
+        name: 'Login Test User',
       });
     });
 
     test('should login with valid credentials', async () => {
       const res = await request(app).post('/auth/login').send({
         email: loginEmail,
-        password: loginPassword
+        password: loginPassword,
       });
 
       expect(res.status).toBe(200);
@@ -79,7 +87,9 @@ describe('Auth Module', () => {
     });
 
     test('should return 400 for missing email', async () => {
-      const res = await request(app).post('/auth/login').send({ password: loginPassword });
+      const res = await request(app)
+        .post('/auth/login')
+        .send({ password: loginPassword });
       expect(res.status).toBe(400);
       expect(res.body.message).toContain('required');
     });
@@ -87,17 +97,19 @@ describe('Auth Module', () => {
     test('should return 401 for invalid credentials', async () => {
       const res = await request(app).post('/auth/login').send({
         email: loginEmail,
-        password: 'WrongPassword'
+        password: 'WrongPassword',
       });
       expect(res.status).toBe(401);
       expect(res.body.message).toContain('Invalid');
     });
 
     test('should return 401 for non-existent user', async () => {
-      const res = await request(app).post('/auth/login').send({
-        email: `no_user_${Date.now()}@example.com`,
-        password: loginPassword
-      });
+      const res = await request(app)
+        .post('/auth/login')
+        .send({
+          email: `no_user_${Date.now()}@example.com`,
+          password: loginPassword,
+        });
       expect(res.status).toBe(401);
     });
   });
@@ -107,8 +119,12 @@ describe('Auth Module', () => {
       const email = `logout_${Date.now()}@example.com`;
       const password = 'SecurePassword123!';
 
-      await request(app).post('/auth/register').send({ email, password, name: 'Logout User' });
-      const loginRes = await request(app).post('/auth/login').send({ email, password });
+      await request(app)
+        .post('/auth/register')
+        .send({ email, password, name: 'Logout User' });
+      const loginRes = await request(app)
+        .post('/auth/login')
+        .send({ email, password });
 
       const res = await request(app)
         .post('/auth/logout')

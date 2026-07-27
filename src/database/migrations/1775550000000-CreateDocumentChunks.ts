@@ -19,11 +19,15 @@ export class CreateDocumentChunks1775550000000 implements MigrationInterface {
         CONSTRAINT "FK_document_chunks_job" FOREIGN KEY ("job_id") REFERENCES "jobs"("id") ON DELETE SET NULL
       )
     `);
-    await queryRunner.query(`CREATE INDEX "IDX_document_chunks_project_job" ON "document_chunks" ("project_id", "job_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_document_chunks_project_job" ON "document_chunks" ("project_id", "job_id")`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_document_chunks_project_job"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_document_chunks_project_job"`
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS "document_chunks"`);
   }
 }

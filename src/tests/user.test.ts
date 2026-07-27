@@ -13,10 +13,12 @@ describe('User Module', () => {
     await request(app).post('/auth/register').send({
       email,
       password,
-      name: 'User Test'
+      name: 'User Test',
     });
 
-    const loginRes = await request(app).post('/auth/login').send({ email, password });
+    const loginRes = await request(app)
+      .post('/auth/login')
+      .send({ email, password });
     authToken = loginRes.body.accessToken;
   });
 
@@ -35,20 +37,26 @@ describe('User Module', () => {
         expect.objectContaining({
           id: expect.any(Number),
           name: expect.any(String),
-          skills: expect.any(Array)
+          skills: expect.any(Array),
         })
       );
     }
   });
 
   test('POST /users should create user', async () => {
-    const payload = { name: 'Test User', email: `createuser_${Date.now()}@example.com`, experienceYears: 2 };
+    const payload = {
+      name: 'Test User',
+      email: `createuser_${Date.now()}@example.com`,
+      experienceYears: 2,
+    };
     const res = await request(app)
       .post('/users')
       .set('Authorization', `Bearer ${authToken}`)
       .send(payload);
     expect(res.status).toBe(201);
-    expect(res.body).toEqual(expect.objectContaining({ id: expect.any(Number), name: 'Test User' }));
+    expect(res.body).toEqual(
+      expect.objectContaining({ id: expect.any(Number), name: 'Test User' })
+    );
   });
 
   test('POST /users with invalid data should return error', async () => {

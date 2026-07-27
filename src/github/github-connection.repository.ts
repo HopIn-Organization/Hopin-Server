@@ -20,7 +20,9 @@ export class GithubConnectionRepository {
     });
   }
 
-  async findByInstallationId(installationId: string): Promise<GithubConnection[]> {
+  async findByInstallationId(
+    installationId: string
+  ): Promise<GithubConnection[]> {
     return this.repo.find({ where: { installationId } });
   }
 
@@ -45,14 +47,23 @@ export class GithubConnectionRepository {
   async upsertByProjectAndRepo(
     projectId: number,
     repoId: string,
-    data: Partial<Omit<GithubConnection, 'id' | 'project' | 'project_id' | 'connectedAt' | 'updatedAt'>>
+    data: Partial<
+      Omit<
+        GithubConnection,
+        'id' | 'project' | 'project_id' | 'connectedAt' | 'updatedAt'
+      >
+    >
   ): Promise<GithubConnection> {
     const existing = await this.findByProjectAndRepoId(projectId, repoId);
     if (existing) {
       this.repo.merge(existing, { ...data, repoId });
       return this.repo.save(existing);
     }
-    const conn = this.repo.create({ ...data, repoId, project: { id: projectId } as any });
+    const conn = this.repo.create({
+      ...data,
+      repoId,
+      project: { id: projectId } as any,
+    });
     return this.repo.save(conn);
   }
 
@@ -61,7 +72,10 @@ export class GithubConnectionRepository {
   }
 
   async markRevoked(installationId: string): Promise<void> {
-    await this.repo.update({ installationId }, { syncStatus: SyncStatus.REVOKED });
+    await this.repo.update(
+      { installationId },
+      { syncStatus: SyncStatus.REVOKED }
+    );
   }
 
   async deleteById(id: number): Promise<void> {

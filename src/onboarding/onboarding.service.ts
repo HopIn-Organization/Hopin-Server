@@ -209,7 +209,8 @@ export class OnboardingService {
           }
           // Partial success still counts as 'used'; only fall back to 'error'
           // when every read failed despite connections being available.
-          knowledgeMeta.status = knowledgeMeta.repos.length > 0 ? 'used' : 'error';
+          knowledgeMeta.status =
+            knowledgeMeta.repos.length > 0 ? 'used' : 'error';
         }
       } catch (err) {
         console.warn(

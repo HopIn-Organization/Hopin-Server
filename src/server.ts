@@ -1,7 +1,10 @@
 import 'reflect-metadata';
 
 const _originalEmit = process.emit.bind(process);
-(process.emit as (...args: unknown[]) => boolean) = function (event: unknown, ...args: unknown[]) {
+(process.emit as (...args: unknown[]) => boolean) = function (
+  event: unknown,
+  ...args: unknown[]
+) {
   if (event === 'warning') {
     const warning = args[0] as { name?: string; message?: string };
     if (

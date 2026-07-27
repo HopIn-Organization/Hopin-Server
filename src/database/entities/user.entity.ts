@@ -1,4 +1,11 @@
-import { AfterLoad, Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  AfterLoad,
+  Column,
+  Entity,
+  ManyToMany,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { ProjectMember } from '../../projectMember/projectMember.entity';
 import { Skill } from '../../skill/skill.entity';
 
@@ -13,10 +20,20 @@ export class User {
   @Column({ type: 'text', name: 'email', unique: true })
   email!: string;
 
-  @Column({ type: 'text', name: 'password_hash', nullable: true, select: false })
+  @Column({
+    type: 'text',
+    name: 'password_hash',
+    nullable: true,
+    select: false,
+  })
   passwordHash!: string | null;
 
-  @Column({ type: 'text', name: 'refresh_token_hash', nullable: true, select: false })
+  @Column({
+    type: 'text',
+    name: 'refresh_token_hash',
+    nullable: true,
+    select: false,
+  })
   refreshTokenHash!: string | null;
 
   @Column({
@@ -31,18 +48,26 @@ export class User {
 
   @AfterLoad()
   computeExperienceYears() {
-    this.experienceYears = (this.workExperience ?? []).reduce((sum, w) => sum + w.years, 0);
+    this.experienceYears = (this.workExperience ?? []).reduce(
+      (sum, w) => sum + w.years,
+      0
+    );
   }
 
   @Column({ type: 'text', name: 'birth_date', nullable: true })
   birthDate!: string | null;
 
-  @Column({ type: 'jsonb', name: 'work_experience', nullable: true, default: '[]' })
+  @Column({
+    type: 'jsonb',
+    name: 'work_experience',
+    nullable: true,
+    default: '[]',
+  })
   workExperience!: Array<{ id: string; title: string; years: number }>;
 
-  @ManyToMany(() => Skill, (skill) => skill.users)
+  @ManyToMany(() => Skill, skill => skill.users)
   skills!: Skill[];
 
-  @OneToMany(() => ProjectMember, (membership) => membership.user)
+  @OneToMany(() => ProjectMember, membership => membership.user)
   projectMemberships!: ProjectMember[];
 }

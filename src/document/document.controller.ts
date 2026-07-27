@@ -35,10 +35,6 @@ interface JobDocumentParams extends ProjectParams {
   jobId: string;
 }
 
-interface JobDocumentDeleteParams extends JobDocumentParams {
-  documentId: string;
-}
-
 export class DocumentController {
   private documentService: DocumentService;
 
@@ -56,7 +52,9 @@ export class DocumentController {
         await this.documentService.getDocumentsByProject(projectId);
       res.json(documents);
     } catch (error: any) {
-      res.status(500).json({ message: 'Error fetching documents' });
+      res
+        .status(500)
+        .json({ message: error?.message || 'Error fetching documents' });
     }
   };
 
@@ -73,7 +71,9 @@ export class DocumentController {
       );
       res.json(documents);
     } catch (error: any) {
-      res.status(500).json({ message: 'Error fetching job documents' });
+      res
+        .status(500)
+        .json({ message: error?.message || 'Error fetching job documents' });
     }
   };
 

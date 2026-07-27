@@ -4,7 +4,7 @@ const config: Config.InitialOptions = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   testMatch: ['**/src/**/?(*.)+(test|spec).ts'],
-  clearMocks: true
+  clearMocks: true,
 };
 
 export default config;

@@ -31,7 +31,9 @@ export class CreateOnboardingTaskProjectMember1775150000000 implements Migration
       )
     `);
 
-    await queryRunner.query(`CREATE TYPE "project_members_role_enum" AS ENUM ('trainee', 'admin')`);
+    await queryRunner.query(
+      `CREATE TYPE "project_members_role_enum" AS ENUM ('trainee', 'admin')`
+    );
 
     await queryRunner.query(`
       CREATE TABLE "project_members" (

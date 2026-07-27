@@ -10,11 +10,11 @@ describe('Project Module', () => {
     await request(app).post('/auth/register').send({
       email: 'projectuser@example.com',
       password: 'SecurePassword123!',
-      name: 'Project User'
+      name: 'Project User',
     });
     const loginRes = await request(app).post('/auth/login').send({
       email: 'projectuser@example.com',
-      password: 'SecurePassword123!'
+      password: 'SecurePassword123!',
     });
     authToken = loginRes.body.accessToken;
   });
@@ -32,7 +32,10 @@ describe('Project Module', () => {
   });
 
   test('POST /projects should create a project', async () => {
-    const payload = { name: 'Test Project', description: 'Test project description' };
+    const payload = {
+      name: 'Test Project',
+      description: 'Test project description',
+    };
     const res = await request(app)
       .post('/projects')
       .set('Authorization', `Bearer ${authToken}`)
