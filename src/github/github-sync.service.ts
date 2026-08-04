@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import simpleGit from 'simple-git';
+import { gitBinary, logGitDiagnostics } from './git-binary';
 import { GithubConnection, SyncStatus } from './github-connection.entity';
 import { GithubConnectionRepository } from './github-connection.repository';
 import { GithubService } from './github.service';
@@ -82,6 +83,12 @@ export class GithubSyncService {
 
   async runSync(connection: GithubConnection): Promise<void> {
     try {
+      // Diagnostics only — never throws, so the sync path below behaves exactly
+      // as it would without this call. Cheap: one `git --version` per sync.
+      await logGitDiagnostics(
+        `sync ${connection.repoOwner}/${connection.repoName}`
+      );
+
       await this.connectionRepo.update(connection.id, {
         syncStatus: SyncStatus.SYNCING,
         lastError: null,
@@ -101,14 +108,23 @@ export class GithubSyncService {
       );
 
       try {
-        await simpleGit().clone(cloneUrl, tmpDir, [
+        console.log(
+          `[GitHub Sync] ${connection.repoOwner}/${connection.repoName}: ` +
+            `cloning branch "${connection.defaultBranch}" with binary "${gitBinary}" into ${tmpDir}`
+        );
+
+        await simpleGit({ binary: gitBinary }).clone(cloneUrl, tmpDir, [
           '--depth',
           '1',
           '--branch',
           connection.defaultBranch,
         ]);
 
-        const headSha = (await simpleGit(tmpDir).revparse(['HEAD'])).trim();
+        const headSha = (
+          await simpleGit({ baseDir: tmpDir, binary: gitBinary }).revparse([
+            'HEAD',
+          ])
+        ).trim();
 
         const repo = `${connection.repoOwner}/${connection.repoName}`;
 
@@ -153,6 +169,22 @@ export class GithubSyncService {
       const msg = err instanceof Error ? err.message : String(err);
       const repo = `${connection.repoOwner}/${connection.repoName}`;
       console.error(`[GitHub Sync] ${repo}: sync failed —`, msg);
+
+      // A spawn failure ("spawn git ENOENT") says nothing about *why* on its own.
+      // Log the errno details plus a fresh git probe so the cause is in the same
+      // log block as the failure. Purely additive — `lastError` is unchanged.
+      const errno = err as NodeJS.ErrnoException;
+      if (errno?.code || errno?.syscall) {
+        console.error(
+          `[GitHub Sync] ${repo}: spawn detail — code=${errno.code ?? 'none'} ` +
+            `syscall=${errno.syscall ?? 'none'} errno=${errno.errno ?? 'none'}`
+        );
+        await logGitDiagnostics(`sync failure ${repo}`);
+      }
+      if (err instanceof Error && err.stack) {
+        console.error(`[GitHub Sync] ${repo}: stack —\n${err.stack}`);
+      }
+
       await this.connectionRepo.update(connection.id, {
         syncStatus: SyncStatus.ERROR,
         lastError: msg,
