@@ -17,6 +17,9 @@ RUN npm ci --omit=dev
 FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+# GitHub repo sync shells out to git (simple-git) to clone connected repos.
+# node:20-alpine ships without it, so the clone fails with "spawn git ENOENT".
+RUN apk add --no-cache git
 RUN addgroup -S hopin && adduser -S hopin -G hopin
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
