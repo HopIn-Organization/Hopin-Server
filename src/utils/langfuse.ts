@@ -106,7 +106,8 @@ const getParentSpanContext = async (
 export const flushLangfuse = async (): Promise<void> => {
   try {
     await langfuseSpanProcessor?.forceFlush();
-  } catch (_err) {
+  } catch (err) {
+    console.log('LANGFUSE_FLUSH_ERROR', err);
     console.warn('[Langfuse] Flush failed (non-fatal)');
   }
 };
