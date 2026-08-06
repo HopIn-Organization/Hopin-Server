@@ -290,15 +290,14 @@ export class OnboardingService {
         `[Onboarding] Generation complete for onboarding id=${onboardingId} | knowledge=${knowledgeMeta.status} repos=${knowledgeMeta.repos.length}`
       );
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
       console.error(
         `[Onboarding] Generation failed for onboarding id=${onboardingId}:`,
-        reason
+        error
       );
       await this.onboardingRepository.updateStatus(
         onboardingId,
         'failed',
-        reason
+        'Something went wrong while generating the onboarding plan. Please try again.'
       );
     }
   }

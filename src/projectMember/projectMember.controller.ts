@@ -31,11 +31,8 @@ export class ProjectMemberController {
       );
       res.status(201).json(member);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Error adding member to project';
-      res.status(500).json({ message });
+      console.error('[addMember] Error:', error);
+      res.status(500).json({ message: 'Error adding member to project' });
     }
   };
 
@@ -53,9 +50,8 @@ export class ProjectMemberController {
 
       res.json(updatedMember);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error updating member role';
-      res.status(500).json({ message });
+      console.error('[updateMemberRole] Error:', error);
+      res.status(500).json({ message: 'Error updating member role' });
     }
   };
 
@@ -66,11 +62,8 @@ export class ProjectMemberController {
       await this.projectMemberService.removeMember(memberId);
       res.status(204).send();
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Error removing member from project';
-      res.status(500).json({ message });
+      console.error('[removeMember] Error:', error);
+      res.status(500).json({ message: 'Error removing member from project' });
     }
   };
 }

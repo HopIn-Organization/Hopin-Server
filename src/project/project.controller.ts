@@ -14,9 +14,8 @@ export class ProjectController {
       const projects = await this.projectService.getProjectsByUser(userId);
       res.json(projects);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error fetching projects';
-      res.status(500).json({ message });
+      console.error('[getAllProjects] Error:', error);
+      res.status(500).json({ message: 'Error fetching projects' });
     }
   };
 
@@ -30,9 +29,8 @@ export class ProjectController {
         res.status(404).json({ message: 'Project not found' });
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error fetching project';
-      res.status(500).json({ message });
+      console.error('[getProjectById] Error:', error);
+      res.status(500).json({ message: 'Error fetching project' });
     }
   };
 
@@ -49,9 +47,8 @@ export class ProjectController {
 
       res.status(201).json(project);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error creating project';
-      res.status(500).json({ message });
+      console.error('[createProject] Error:', error);
+      res.status(500).json({ message: 'Error creating project' });
     }
   };
 
