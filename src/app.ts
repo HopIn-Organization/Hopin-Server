@@ -52,7 +52,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   }
 
   if (err instanceof QueryFailedError) {
-    res.status(422).json({ error: `Database error: ${err.message}` });
+    res.status(422).json({ message: 'Invalid request data.' });
     return;
   }
 

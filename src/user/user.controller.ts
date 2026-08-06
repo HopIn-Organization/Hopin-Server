@@ -30,9 +30,8 @@ export class UserController {
         res.status(404).json({ message: 'User not found' });
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error fetching user';
-      res.status(500).json({ message });
+      console.error('[getUserById] Error:', error);
+      res.status(500).json({ message: 'Error fetching user' });
     }
   };
 
@@ -46,9 +45,8 @@ export class UserController {
       const user = await this.userService.createUser(userData);
       res.status(201).json(user);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error creating user';
-      res.status(500).json({ message });
+      console.error('[createUser] Error:', error);
+      res.status(500).json({ message: 'Error creating user' });
     }
   };
 }

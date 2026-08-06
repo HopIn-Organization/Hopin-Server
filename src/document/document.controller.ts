@@ -51,10 +51,9 @@ export class DocumentController {
       const documents =
         await this.documentService.getDocumentsByProject(projectId);
       res.json(documents);
-    } catch (error: any) {
-      res
-        .status(500)
-        .json({ message: error?.message || 'Error fetching documents' });
+    } catch (error) {
+      console.error('[getDocuments] Error:', error);
+      res.status(500).json({ message: 'Error fetching documents' });
     }
   };
 
@@ -70,10 +69,9 @@ export class DocumentController {
         jobId
       );
       res.json(documents);
-    } catch (error: any) {
-      res
-        .status(500)
-        .json({ message: error?.message || 'Error fetching job documents' });
+    } catch (error) {
+      console.error('[getJobDocuments] Error:', error);
+      res.status(500).json({ message: 'Error fetching job documents' });
     }
   };
 

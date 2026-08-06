@@ -187,7 +187,7 @@ export class GithubSyncService {
 
       await this.connectionRepo.update(connection.id, {
         syncStatus: SyncStatus.ERROR,
-        lastError: msg,
+        lastError: 'Sync failed. Please try again or reconnect the repository.',
       });
     }
   }

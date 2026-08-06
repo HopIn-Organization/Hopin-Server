@@ -13,9 +13,8 @@ export class JobController {
       const jobs = await this.jobService.getAllJobs();
       res.json(jobs);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error fetching jobs';
-      res.status(500).json({ message });
+      console.error('[getAllJobs] Error:', error);
+      res.status(500).json({ message: 'Error fetching jobs' });
     }
   };
 
@@ -29,9 +28,8 @@ export class JobController {
         res.status(404).json({ message: 'Job not found' });
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error fetching job';
-      res.status(500).json({ message });
+      console.error('[getJobById] Error:', error);
+      res.status(500).json({ message: 'Error fetching job' });
     }
   };
 
@@ -52,9 +50,8 @@ export class JobController {
       });
       res.status(201).json(job);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error creating job';
-      res.status(500).json({ message });
+      console.error('[createJob] Error:', error);
+      res.status(500).json({ message: 'Error creating job' });
     }
   };
 
@@ -83,9 +80,8 @@ export class JobController {
         res.status(404).json({ message: 'Job not found' });
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Error adding skills to job';
-      res.status(500).json({ message });
+      console.error('[addSkillsToJob] Error:', error);
+      res.status(500).json({ message: 'Error adding skills to job' });
     }
   };
 }
