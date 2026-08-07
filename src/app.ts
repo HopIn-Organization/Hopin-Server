@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import { QueryFailedError } from 'typeorm';
 import indexRouter from './routes/index';
 import { langfuseMiddleware } from './utils/langfuse';
-import { githubWebhookController } from './github/github-webhook.controller';
+import { githubWebhookController } from './github/webhook';
 
 const app: Application = express();
 
