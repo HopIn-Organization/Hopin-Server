@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyWebhookSignature } from './webhook-signature';
+import { isWebhookAllowed, logWebhookRequest } from './webhook-debug';
 import { InstallationEventHandler } from './installation-event.handler';
 import { PushEventHandler } from './push-event.handler';
 
@@ -18,6 +19,16 @@ export class GithubWebhookController {
     next: NextFunction
   ): Promise<void> => {
     try {
+      // Opt-in switch. While off, deliveries are logged in full and acked but
+      // never acted on — lets you point a GitHub App at this server and inspect
+      // what arrives before wiring it up for real.
+      if (!isWebhookAllowed()) {
+        logWebhookRequest(req);
+        // Still ack — a non-2xx makes GitHub retry the same delivery
+        res.sendStatus(200);
+        return;
+      }
+
       // Verify the HMAC-SHA256 signature before processing anything else.
       // req.body is a raw Buffer here because the route uses express.raw().
       const sig = req.headers['x-hub-signature-256'] as string | undefined;
