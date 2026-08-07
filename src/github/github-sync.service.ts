@@ -83,7 +83,6 @@ export class GithubSyncService {
 
   async runSync(connection: GithubConnection): Promise<void> {
     try {
-      
       // Diagnostics only — never throws, so the sync path below behaves exactly
       // as it would without this call. Cheap: one `git --version` per sync.
       await logGitDiagnostics(
